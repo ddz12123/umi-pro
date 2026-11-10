@@ -1,0 +1,130 @@
+/* 全局设计 token 与基础样式 */
+
+:root {
+  --app-bg: #f4f6fa;
+  --app-surface: #fff;
+  --app-border: #e9edf3;
+  --app-text: #1f2937;
+  --app-text-secondary: #6b7280;
+  --app-primary: #2563eb;
+  --app-sider-bg: #0b1424;
+  --app-header-height: 56px;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  overflow: hidden;
+  font-family: -apple-system, blinkmacsystemfont, 'Segoe UI', 'PingFang SC',
+    'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', arial, sans-serif;
+  color: var(--app-text);
+  background: var(--app-bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizelegibility;
+}
+
+* {
+  box-sizing: border-box;
+  scrollbar-color: #c7d2de transparent;
+  scrollbar-width: thin;
+}
+
+button,
+input,
+textarea,
+select {
+  font-family: inherit;
+}
+
+a {
+  color: var(--app-primary);
+}
+
+::selection {
+  color: #fff;
+  background: #3b82f6;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  background-clip: content-box;
+  border: 2px solid transparent;
+  border-radius: 8px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+  background-clip: content-box;
+}
+
+:focus-visible {
+  outline: 2px solid rgb(37 99 235 / 55%);
+  outline-offset: 2px;
+}
+
+/*
+ * 首屏防白屏：
+ * - JS 尚未挂载时 #root 为空
+ * - Umi initialState 初始化期间会渲染一个空 div
+ * 两种情况都用纯 CSS 占位，内容挂载后 :empty 自动失效。
+ */
+#root:empty,
+#root > div:empty {
+  background: var(--app-bg);
+}
+
+#root:empty::before,
+#root > div:empty::before {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  width: 26px;
+  height: 26px;
+  margin: -28px 0 0 -13px;
+  content: '';
+  border: 2.5px solid #dbe7fb;
+  border-top-color: var(--app-primary);
+  border-radius: 50%;
+  animation: app-boot-spin 0.8s linear infinite;
+}
+
+#root:empty::after,
+#root > div:empty::after {
+  position: fixed;
+  top: calc(50% + 14px);
+  right: 0;
+  left: 0;
+  font-size: 13px;
+  color: #8a97a8;
+  text-align: center;
+  content: '正在加载…';
+}
+
+@keyframes app-boot-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #root:empty::before,
+  #root > div:empty::before {
+    animation-duration: 2s;
+  }
+}

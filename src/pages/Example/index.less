@@ -1,0 +1,15 @@
+@import '../../styles/table-layout.less';
+
+/* 表格撑满样式按容器启用，不影响应用中的其他表格。 */
+
+.tableWrap {
+  :global {
+    .table-layout();
+  }
+
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}

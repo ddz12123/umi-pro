@@ -1,0 +1,43 @@
+.header {
+  display: flex;
+  flex-shrink: 0;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.content {
+  min-width: 0;
+}
+
+.title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 30px;
+  color: #111827;
+  letter-spacing: -0.3px;
+}
+
+.description {
+  margin: 4px 0 0;
+  font-size: 13px;
+  line-height: 20px;
+  color: #6b7280;
+}
+
+.extra {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 8px;
+  padding-top: 2px;
+}
+
+@media (max-width: 768px) {
+  .header {
+    flex-direction: column;
+    gap: 8px;
+  }
+}

@@ -1,0 +1,129 @@
+.table-layout() {
+  /*
+ * 管理后台「表格页」公共布局（纯 CSS，无 JS 测量 / 无内联样式）
+ * 作为 Less mixin 按需在表格容器内启用，后续表格页直接复用。
+ *
+ * 前提：ProTable 必须传 scroll.y（任意值即可，如 scroll={{ y: 1 }}），
+ *       antd 才会把表头拆成独立容器，滚动条只出现在数据区。
+ *
+ * 开启 scroll.y 后的 DOM：
+ *   .ant-pro-table
+ *     ├─ .ant-pro-table-search        搜索卡片（独立）
+ *     └─ 表格卡片
+ *         └─ .ant-table-wrapper
+ *             └─ div (Spin 根)
+ *                 └─ div (spin-container)
+ *                     ├─ .ant-table
+ *                     │   └─ .ant-table-container
+ *                     │       ├─ .ant-table-header   ← 表头，固定不滚动
+ *                     │       └─ .ant-table-body     ← 数据区，只有这里滚动
+ *                     └─ .ant-pagination             ← 固定贴底
+ *
+ * Spin 两层类名带 css-var hash，一律用结构选择器拉伸。
+ */
+
+  // ProTable 根节点：固定占满页面容器
+  .ant-pro-table {
+    display: flex;
+    flex: 1 1 0%;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  // 搜索卡片：内容高度，不参与拉伸；与表格卡片保留间距
+  .ant-pro-table > .ant-pro-table-search {
+    flex: 0 0 auto;
+    margin-bottom: 16px;
+  }
+
+  // 表格卡片（根节点最后一个子元素）：吃掉剩余高度
+  .ant-pro-table > :last-child {
+    display: flex;
+    flex: 1 1 0%;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+
+    > .ant-pro-card-body,
+    > .ant-card-body {
+      display: flex;
+      flex: 1 1 0%;
+      flex-direction: column;
+      min-height: 0;
+      padding-bottom: 0 !important;
+    }
+  }
+
+  // 工具栏保持内容高度
+  .ant-pro-table .ant-pro-table-list-toolbar-container {
+    flex: 0 0 auto;
+  }
+
+  // table-wrapper 撑满卡片；清浮动伪元素在 flex 里会变成多余子项
+  .ant-pro-table .ant-table-wrapper {
+    display: flex;
+    flex: 1 1 0%;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+
+    &::before,
+    &::after {
+      display: none !important;
+    }
+  }
+
+  // Spin 根层 + spin-container 层：结构选择器逐层拉伸
+  .ant-pro-table .ant-table-wrapper > div,
+  .ant-pro-table .ant-table-wrapper > div > div {
+    display: flex;
+    flex: 1 1 0%;
+    flex-direction: column;
+    min-height: 0;
+
+    &::before,
+    &::after {
+      display: none !important;
+    }
+  }
+
+  // 表格本体占满 spin-container 剩余高度
+  .ant-pro-table .ant-table {
+    display: flex;
+    flex: 1 1 0%;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .ant-pro-table .ant-table-container {
+    display: flex;
+    flex: 1 1 0%;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  // 表头：独立容器，固定不滚动
+  .ant-pro-table .ant-table-header {
+    flex: 0 0 auto;
+    overflow: hidden !important;
+  }
+
+  // 数据区：吃掉剩余高度，滚动条只在这里，内容放得下时不出现
+  // max-height:none 用于覆盖 scroll.y 生成的 max-height:1px 内联样式
+  .ant-pro-table .ant-table-body {
+    flex: 1 1 0%;
+    min-height: 0;
+    max-height: none !important;
+    overflow: auto !important;
+  }
+
+  // 分页贴卡片底部，四周留白
+  .ant-pro-table .ant-pagination {
+    flex: 0 0 auto;
+    margin: 0 !important;
+    margin-top: auto !important;
+    padding: 16px 0;
+  }
+}
