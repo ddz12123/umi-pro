@@ -23,7 +23,7 @@ export const appTheme: ThemeConfig = {
       headerBg: '#fff',
       bodyBg: '#f4f6fa',
       siderBg: '#0b1424',
-      headerHeight: 56,
+      headerHeight: 50,
       headerPadding: '0 16px',
     },
     Menu: {
@@ -48,7 +48,6 @@ export const appTheme: ThemeConfig = {
       cardGutter: 6,
       itemColor: '#5b6678',
       itemHoverColor: '#1f2937',
-      itemSelectedColor: '#1d4ed8',
     },
     Breadcrumb: {
       itemColor: '#64748b',

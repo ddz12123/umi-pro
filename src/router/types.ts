@@ -1,5 +1,3 @@
-import type { PageComponentKey } from './page-registry';
-
 /** 页面布局模式：fill 撑满（表格页），page 自身滚动（工作台/详情页） */
 export type LayoutMode = 'fill' | 'page';
 
@@ -20,10 +18,11 @@ export interface AppRoute {
   /** 绝对路径 */
   path: string;
   /**
-   * 页面组件注册表 key（见 src/router/page-registry.ts）
-   * 动态路由只传 key，真正渲染哪个组件由前端注册表决定
+   * 页面组件路径（相对 src/pages），如 System/User
    */
-  component?: PageComponentKey;
+  component?: string;
+  /** 访问权限码；对应 access.ts 中的菜单权限判断 */
+  access?: string;
   icon?: RouteIcon;
   layoutMode?: LayoutMode;
   /** 菜单排序，数字越小越靠前；不传时保持后端返回顺序 */

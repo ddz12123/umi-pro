@@ -1,6 +1,6 @@
 import PageHeader from '@/components/PageHeader';
+import { useMenuRoutes } from '@/hooks/useMenuRoutes';
 import { findRouteByComponent } from '@/router';
-import { useRouteStore } from '@/stores/routes';
 import { history, useModel } from '@umijs/max';
 import { Button, Card, Col, Row, Space, Tag, Typography } from 'antd';
 import React from 'react';
@@ -21,13 +21,13 @@ const FEATURES = [
   },
   {
     tag: '路由',
-    desc: '业务路由由接口下发；菜单、面包屑与页面导航使用同一份配置',
+    desc: '页面路由前端静态维护，登录接口下发菜单权限，菜单与访问权限按权限码过滤',
   },
 ];
 
 const HomePage: React.FC = () => {
   const { initialState } = useModel('@@initialState');
-  const routes = useRouteStore((state) => state.routes);
+  const routes = useMenuRoutes();
   const examplePath = findRouteByComponent('Example', routes)?.path;
 
   return (
@@ -42,7 +42,8 @@ const HomePage: React.FC = () => {
             </Typography.Title>
             <Typography.Paragraph className={styles.heroDesc}>
               这是一个基于 Umi Max + Ant Design 6 + ProComponents 3
-              的基础框架。列表示例演示分页查询与增删改，应用配置、路由和公共布局独立维护。
+              的基础框架。页面路由在前端静态声明，登录接口只返回菜单权限，
+              菜单和访问控制按权限码过滤。列表示例演示分页查询与增删改。
             </Typography.Paragraph>
           </div>
           <Button
@@ -60,7 +61,7 @@ const HomePage: React.FC = () => {
             <Card>
               <Typography.Text type="secondary">路由来源</Typography.Text>
               <Typography.Title level={3} className={styles.statValue}>
-                后端接口
+                前端静态配置
               </Typography.Title>
             </Card>
           </Col>

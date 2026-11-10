@@ -3,12 +3,11 @@ import GlobalFeedback from '@/components/GlobalFeedback';
 import SessionSync from '@/components/SessionSync';
 import { appTheme } from '@/config/theme';
 import { SYSTEM_NAME } from '@/constants/app';
-import { getRouteTitle, matchRoute } from '@/router';
+import { getRouteTitle, matchRoute, staticRoutes } from '@/router';
 import { isLoginPath } from '@/router/paths';
-import type { ClientRoute } from '@/router/runtime';
-import { applyDynamicRoutes, bootstrapRoutes } from '@/router/runtime';
-import { useRouteStore } from '@/stores/routes';
+import { applyThemeCssVars, useThemeStore } from '@/stores/theme';
 import { getAuthUser } from '@/utils/auth';
+import { startProgress } from '@/utils/progress';
 import { App, ConfigProvider } from 'antd';
 import zhCN from 'antd/locale/zh_CN';
 import React from 'react';
@@ -27,33 +26,45 @@ export function getInitialState() {
   };
 }
 
-/**
- * Umi 渲染前钩子
- * 先取得当前账号的接口路由，patchClientRoutes 才能同步拿到完整路由树。
- */
-export async function render(oldRender: () => void) {
-  await bootstrapRoutes();
-  oldRender();
-}
+/** 主题 Provider：把用户选择的主题色同步给 Ant Design 和自定义样式。 */
+const AppProviders: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
+  const primaryColor = useThemeStore((state) => state.primaryColor);
 
-/** Umi 客户端路由补丁：把接口业务路由挂到公共 Layout 下。 */
-export function patchClientRoutes({ routes }: { routes: ClientRoute[] }) {
-  applyDynamicRoutes(routes);
-}
+  React.useEffect(() => {
+    applyThemeCssVars(primaryColor);
+  }, [primaryColor]);
 
-/** 根级 Provider：主题、中文语言包、全局反馈和异常兜底。 */
-export function rootContainer(container: React.ReactNode) {
+  const theme = React.useMemo(
+    () => ({
+      ...appTheme,
+      token: {
+        ...appTheme.token,
+        colorPrimary: primaryColor,
+        colorInfo: primaryColor,
+        colorLink: primaryColor,
+      },
+    }),
+    [primaryColor],
+  );
+
   return (
-    <ConfigProvider locale={zhCN} theme={appTheme}>
+    <ConfigProvider locale={zhCN} theme={theme}>
       <App style={{ height: '100%' }}>
         <GlobalFeedback />
         <ErrorBoundary>
           <SessionSync />
-          {container}
+          {children}
         </ErrorBoundary>
       </App>
     </ConfigProvider>
   );
+};
+
+/** 根级 Provider：主题、中文语言包、全局反馈和异常兜底。 */
+export function rootContainer(container: React.ReactNode) {
+  return <AppProviders>{container}</AppProviders>;
 }
 
 /** 路由变化时同步浏览器标题：登录页、业务页、未知页分别处理。 */
@@ -63,13 +74,13 @@ export function onRouteChange({
   location: { pathname: string };
 }) {
   const { pathname } = location;
-  const routes = useRouteStore.getState().routes;
+  startProgress();
   const title = isLoginPath(pathname)
     ? '登录'
-    : matchRoute(pathname, routes)
+    : matchRoute(pathname, staticRoutes)
     ? undefined
     : '页面不存在';
   document.title = title
     ? title + ' · ' + SYSTEM_NAME
-    : getRouteTitle(pathname, routes);
+    : getRouteTitle(pathname, staticRoutes);
 }

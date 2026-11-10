@@ -43,3 +43,16 @@ export function getGroupLandingPath(group: AppRoute): string | undefined {
     leaves[0]
   )?.route.path;
 }
+
+/** 按 access 规则递归过滤路由；子节点全部被过滤时，分组也一并移除。 */
+export function filterRoutesByAccess(
+  routes: AppRoute[],
+  canAccess: (route: AppRoute) => boolean,
+): AppRoute[] {
+  return routes.flatMap((route) => {
+    if (!canAccess(route)) return [];
+    if (!route.children?.length) return [route];
+    const children = filterRoutesByAccess(route.children, canAccess);
+    return children.length ? [{ ...route, children }] : [];
+  });
+}

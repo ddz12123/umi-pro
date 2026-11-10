@@ -1,10 +1,18 @@
+import accessFactory from '@/access';
 import Logo from '@/components/Logo';
 import { SYSTEM_NAME } from '@/constants/app';
-import { DEFAULT_ROUTE_PATH, getAffixPaths, matchRoute } from '@/router';
+import { useMenuRoutes } from '@/hooks/useMenuRoutes';
+import {
+  DEFAULT_ROUTE_PATH,
+  getAffixPaths,
+  matchRoute,
+  staticRoutes,
+} from '@/router';
+import { filterRoutesByAccess } from '@/router/tree';
 import { login } from '@/services/auth';
-import { RouteLoadCancelledError, useRouteStore } from '@/stores/routes';
 import { useTabsStore } from '@/stores/tabs';
 import { clearAuth, getSafeRedirect, getToken, setAuth } from '@/utils/auth';
+import { doneProgress } from '@/utils/progress';
 import { getRequestErrorMessage } from '@/utils/request-error';
 import {
   EyeInvisibleOutlined,
@@ -50,6 +58,10 @@ const LoginPage: React.FC = () => {
   useEffect(() => {
     eyesClosedRef.current = isEyesClosed;
   }, [isEyesClosed]);
+
+  useEffect(() => {
+    doneProgress();
+  }, []);
 
   useEffect(() => {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
@@ -126,7 +138,7 @@ const LoginPage: React.FC = () => {
 
   const redirectParam = searchParams.get('redirect');
   const redirect = getSafeRedirect(redirectParam);
-  const currentRoutes = useRouteStore.getState().routes;
+  const currentRoutes = useMenuRoutes();
   const currentMatch = redirect
     ? matchRoute(redirect, currentRoutes)
     : undefined;
@@ -158,8 +170,15 @@ const LoginPage: React.FC = () => {
       });
       loginToken = token;
       useTabsStore.getState().reset();
-      useRouteStore.getState().reset();
-      const routes = await useRouteStore.getState().loadRoutes();
+      // 按登录接口返回的权限码直接过滤静态路由
+      const access = accessFactory({
+        menuPermissions: permissionSet.menus,
+        buttonPermissions: permissionSet.buttons,
+      });
+      const routes = filterRoutesByAccess(
+        staticRoutes,
+        access.normalRouteFilter,
+      );
       if (getToken() !== token) return;
       await setInitialState((previous) =>
         getToken() === token
@@ -180,16 +199,11 @@ const LoginPage: React.FC = () => {
       const target = targetMatch ? redirect! : fallbackPath;
       message.success('登录成功');
 
-      // 接口路由在 Umi 渲染前注入，登录后整页刷新才能拿到新账号的菜单
+      // 整页刷新，确保布局、页签和菜单都按新账号权限重建
       window.location.replace(target);
     } catch (error) {
-      if (
-        error instanceof RouteLoadCancelledError ||
-        getToken() !== (loginToken ?? requestSession)
-      )
-        return;
+      if (getToken() !== (loginToken ?? requestSession)) return;
       clearAuth();
-      useRouteStore.getState().reset();
       message.error(getRequestErrorMessage(error));
     } finally {
       setLoading(false);

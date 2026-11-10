@@ -7,8 +7,16 @@
   --app-text: #1f2937;
   --app-text-secondary: #6b7280;
   --app-primary: #2563eb;
+  --app-primary-light: #93c5fd;
+  --app-primary-soft: rgb(37 99 235 / 10%);
+  --app-primary-13: rgb(37 99 235 / 13%);
+  --app-primary-18: rgb(37 99 235 / 18%);
+  --app-primary-border: rgb(37 99 235 / 24%);
+  --app-primary-28: rgb(37 99 235 / 28%);
+  --app-primary-70: rgb(37 99 235 / 70%);
+  --app-primary-glow: rgb(37 99 235 / 35%);
   --app-sider-bg: #0b1424;
-  --app-header-height: 56px;
+  --app-header-height: 50px;
 }
 
 html,
@@ -119,6 +127,37 @@ a {
 @keyframes app-boot-spin {
   to {
     transform: rotate(360deg);
+  }
+}
+
+/* ==================== 顶部加载进度条 ==================== */
+
+#nprogress {
+  pointer-events: none;
+
+  .bar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 2000;
+    width: 100%;
+    height: 2px;
+    background: var(--app-primary);
+  }
+
+  .peg {
+    position: absolute;
+    right: 0;
+    display: block;
+    width: 100px;
+    height: 100%;
+    opacity: 1;
+    box-shadow: 0 0 10px var(--app-primary), 0 0 5px var(--app-primary);
+    transform: rotate(3deg) translate(0, -4px);
+  }
+
+  .spinner {
+    display: none;
   }
 }
 

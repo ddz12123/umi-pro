@@ -1,6 +1,5 @@
 import { appConfig } from '@/config/app';
 import { isLoginPath } from '@/router/paths';
-import { useRouteStore } from '@/stores/routes';
 import { useTabsStore } from '@/stores/tabs';
 import { AUTH_STORAGE_KEY, getToken } from '@/utils/auth';
 import { endSession } from '@/utils/session';
@@ -27,8 +26,7 @@ export default function SessionSync() {
         endSession();
       } else if (event.oldValue !== event.newValue) {
         useTabsStore.getState().reset();
-        useRouteStore.getState().reset();
-        // 重建 Umi 路由与初始用户信息，避免另一个窗口换号后保留旧页面。
+        // 另一个窗口换号后整页刷新，按新账号权限重建菜单
         window.location.reload();
       }
     };

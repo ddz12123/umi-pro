@@ -1,8 +1,8 @@
 import ErrorBoundary from '@/components/ErrorBoundary';
-import ExceptionPage from '@/components/ExceptionPage';
 import { appConfig } from '@/config/app';
 import { SIDER_COLLAPSED_KEY } from '@/constants/layout';
 import { useIsMobile } from '@/hooks/useIsMobile';
+import { useMenuRoutes } from '@/hooks/useMenuRoutes';
 import {
   DEFAULT_ROUTE_PATH,
   findGroupRoute,
@@ -10,15 +10,16 @@ import {
   getParentPaths,
   matchRoute,
 } from '@/router';
-import { useRouteStore } from '@/stores/routes';
 import { useTabsStore } from '@/stores/tabs';
 import { getLoginUrl, getToken } from '@/utils/auth';
+import { doneProgress } from '@/utils/progress';
 import { endSession } from '@/utils/session';
 import { local } from '@/utils/storage';
 import { Navigate, Outlet, history, useLocation, useModel } from '@umijs/max';
 import { Drawer, Layout } from 'antd';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import HeaderBar from './components/HeaderBar';
+import SettingsDrawer from './components/SettingsDrawer';
 import Sidebar from './components/Sidebar';
 import type { TabItem } from './components/TabsBar';
 import TabsBar from './components/TabsBar';
@@ -41,13 +42,13 @@ const BasicLayout: React.FC = () => {
     () => local.getItem(SIDER_COLLAPSED_KEY) === '1',
   );
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [openKeys, setOpenKeys] = useState<string[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
   const refreshTimer = useRef<number>();
 
-  const routes = useRouteStore((state) => state.routes);
-  const routeError = useRouteStore((state) => state.error);
+  const routes = useMenuRoutes();
 
   const tabPaths = useTabsStore((state) => state.tabs);
   const openTab = useTabsStore((state) => state.open);
@@ -89,6 +90,7 @@ const BasicLayout: React.FC = () => {
         {
           key: path,
           title: match.route.name,
+          icon: match.route.icon,
           affix: affixPaths.includes(path),
         },
       ];
@@ -114,6 +116,11 @@ const BasicLayout: React.FC = () => {
   useEffect(() => {
     if (isMobile) setMobileMenuOpen(false);
   }, [activeKey, isMobile]);
+
+  // 页面渲染完成，结束顶部加载进度条
+  useEffect(() => {
+    doneProgress();
+  }, [activeKey]);
 
   useEffect(
     () => () => {
@@ -253,6 +260,7 @@ const BasicLayout: React.FC = () => {
           userName={initialState?.name || ''}
           avatar={initialState?.avatar}
           onToggleSider={toggleSider}
+          onOpenSettings={() => setSettingsOpen(true)}
           onLogout={handleLogout}
         />
 
@@ -277,15 +285,7 @@ const BasicLayout: React.FC = () => {
             className={layoutMode === 'fill' ? styles.fill : styles.page}
           >
             <ErrorBoundary resetKey={`${activeKey}-${refreshKey}`}>
-              {routeError ? (
-                <ExceptionPage
-                  status={500}
-                  title="页面配置加载失败"
-                  description={routeError}
-                />
-              ) : (
-                <Outlet />
-              )}
+              <Outlet />
             </ErrorBoundary>
           </div>
         </Content>
@@ -312,6 +312,11 @@ const BasicLayout: React.FC = () => {
           />
         </Drawer>
       ) : null}
+
+      <SettingsDrawer
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+      />
     </Layout>
   );
 };

@@ -1,7 +1,5 @@
 import { useAccess } from '@/hooks/useAccess';
 import { routeIconKeys } from '@/router';
-import { isPageComponentKey } from '@/router/page-registry';
-import { staticRoutePaths } from '@/router/static-routes';
 import type {
   PermissionPayload,
   PermissionType,
@@ -70,7 +68,7 @@ function buildParentTree(
   });
 }
 
-/** 权限管理：维护菜单权限和按钮权限，并作为动态路由和角色授权的数据源 */
+/** 权限管理：维护菜单权限和按钮权限，作为角色授权和菜单可见性的数据源 */
 const SystemPermissionPage: React.FC = () => {
   const { message } = App.useApp();
   const { hasPermission } = useAccess();
@@ -373,17 +371,6 @@ const SystemPermissionPage: React.FC = () => {
                   pattern: /^\/[a-zA-Z0-9_-]+(?:\/[a-zA-Z0-9_-]+)*$/,
                   message: '请使用规范的绝对路径，不能包含空段',
                 },
-                {
-                  validator: async (_, value) => {
-                    if (
-                      !value ||
-                      (value !== '/' && !staticRoutePaths.has(value))
-                    ) {
-                      return;
-                    }
-                    throw new Error('该路径已被静态路由占用');
-                  },
-                },
               ]}
             >
               <Input placeholder="例如：/system/user" />
@@ -392,19 +379,10 @@ const SystemPermissionPage: React.FC = () => {
           {permissionType === 'menu' ? (
             <Form.Item
               name="component"
-              label="页面组件 key"
-              rules={[
-                { required: true, message: '请输入已注册的页面 key' },
-                {
-                  validator: async (_, value) => {
-                    const key = String(value || '').replace(/^\.\//, '');
-                    if (!key || isPageComponentKey(key)) return;
-                    throw new Error('组件 key 未在 page-registry 注册');
-                  },
-                },
-              ]}
+              label="页面组件路径"
+              rules={[{ required: true, message: '请输入页面组件路径' }]}
             >
-              <Input placeholder="例如：System/User" />
+              <Input placeholder="例如：@/pages/System/User" />
             </Form.Item>
           ) : null}
           <Form.Item

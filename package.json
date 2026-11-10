@@ -8,14 +8,13 @@
     "build": "max build",
     "check": "pnpm lint && pnpm typecheck && pnpm format:check",
     "dev": "max dev",
-    "format": "prettier --write src mock tests .umirc.ts package.json typings.d.ts README.md",
-    "format:check": "prettier --check src mock tests .umirc.ts package.json typings.d.ts README.md",
+    "format": "prettier --write src mock .umirc.ts package.json typings.d.ts README.md",
+    "format:check": "prettier --check src mock .umirc.ts package.json typings.d.ts README.md",
     "postinstall": "max setup",
     "lint": "max lint",
     "prepare": "husky",
     "setup": "max setup",
     "start": "npm run dev",
-    "test": "node --test tests/core.test.cjs",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -23,9 +22,11 @@
     "@ant-design/pro-components": "3.1.15-9",
     "@umijs/max": "^4.7.32",
     "antd": "^6.7.0",
+    "nprogress": "^0.2.0",
     "zustand": "^5.1.0"
   },
   "devDependencies": {
+    "@types/nprogress": "^0.2.3",
     "@types/react": "^18.0.33",
     "@types/react-dom": "^18.0.11",
     "husky": "^9",

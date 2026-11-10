@@ -1,3 +1,5 @@
+import type { RouteIcon } from '@/router';
+import { useThemeStore } from '@/stores/theme';
 import {
   CloseCircleOutlined,
   CloseOutlined,
@@ -11,10 +13,12 @@ import type { MenuProps } from 'antd';
 import { Button, Dropdown, Tabs, Tooltip } from 'antd';
 import React from 'react';
 import styles from '../index.less';
+import { getMenuIcon } from './menu-icons';
 
 export interface TabItem {
   key: string;
   title: string;
+  icon?: RouteIcon;
   affix?: boolean;
 }
 
@@ -43,6 +47,14 @@ const TabsBar: React.FC<TabsBarProps> = ({
   onCloseRight,
   onCloseAll,
 }) => {
+  const tabsStyle = useThemeStore((state) => state.tabsStyle);
+  const tabsStyleClass = {
+    soft: styles.tabsSoft,
+    line: styles.tabsLine,
+    card: styles.tabsCard,
+    pill: styles.tabsPill,
+  }[tabsStyle];
+
   const buildActions = (tab: TabItem): MenuProps['items'] => {
     const index = tabs.findIndex((item) => item.key === tab.key);
     const others = tabs.filter(
@@ -117,6 +129,9 @@ const TabsBar: React.FC<TabsBarProps> = ({
         }}
       >
         <span className={styles.tabLabel} title={tab.title}>
+          {tab.icon ? (
+            <span className={styles.tabIcon}>{getMenuIcon(tab.icon, 0)}</span>
+          ) : null}
           {tab.title}
         </span>
       </Dropdown>
@@ -134,7 +149,7 @@ const TabsBar: React.FC<TabsBarProps> = ({
   return (
     <div className={styles.tabsBar}>
       <Tabs
-        className={styles.tabs}
+        className={[styles.tabs, tabsStyleClass].filter(Boolean).join(' ')}
         type="editable-card"
         size="small"
         hideAdd

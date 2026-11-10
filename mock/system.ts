@@ -2,8 +2,7 @@
  * RBAC 系统管理 mock
  * ------------------------------------------------------------------
  * 用户、角色、权限三张数据在开发进程内共享，增删改后刷新列表即可看到。
- * 权限树同时用于生成 /api/v1/routes 的动态路由：
- * 菜单权限会进入路由，按钮权限只作为角色授权点。
+ * 登录接口返回菜单/按钮权限码，前端静态路由按菜单权限过滤。
  */
 
 export type SystemStatus = 'active' | 'disabled';
@@ -70,7 +69,7 @@ let menus: MockMenu[] = [
     name: '用户管理',
     type: 'menu',
     path: '/system/user',
-    component: 'System/User',
+    component: '@/pages/System/User',
     permission: 'system:user:list',
     icon: 'user',
     layoutMode: 'fill',
@@ -114,7 +113,7 @@ let menus: MockMenu[] = [
     name: '角色管理',
     type: 'menu',
     path: '/system/role',
-    component: 'System/Role',
+    component: '@/pages/System/Role',
     permission: 'system:role:list',
     icon: 'role',
     layoutMode: 'fill',
@@ -168,7 +167,7 @@ let menus: MockMenu[] = [
     name: '权限管理',
     type: 'menu',
     path: '/system/permission',
-    component: 'System/Permission',
+    component: '@/pages/System/Permission',
     permission: 'system:permission:list',
     icon: 'menu',
     layoutMode: 'fill',
@@ -212,7 +211,7 @@ let menus: MockMenu[] = [
     name: '列表示例',
     type: 'menu',
     path: '/example',
-    component: 'Example',
+    component: '@/pages/Example',
     permission: 'example:list',
     icon: 'table',
     layoutMode: 'fill',
@@ -560,7 +559,7 @@ const parseMenuInput = (body: any, id?: string) => {
 
   const component = type === 'menu' ? text(body.component) : undefined;
   if (type === 'menu' && !component) {
-    throw new Error('菜单权限必须填写页面组件 key');
+    throw new Error('菜单权限必须填写页面组件路径');
   }
   const permission = text(body.permission) || undefined;
   if (type !== 'directory' && !permission) {
@@ -968,81 +967,3 @@ export const systemRoutesMock = {
 };
 
 export default systemRoutesMock;
-
-/**
- * 把权限树转换成动态路由
- * 只保留启用中的菜单权限，按钮权限只参与角色授权，不生成页面路由。
- * permissions 为 undefined 时代表超级管理员，返回全部菜单权限。
- */
-interface MockRouteNode {
-  name: string;
-  path?: string;
-  component?: string;
-  icon?: string;
-  layoutMode?: SystemLayoutMode;
-  order: number;
-  children?: MockRouteNode[];
-}
-
-function buildRoutes(permissions?: Set<string>): MockRouteNode[] {
-  const walk = (parentId: string | null): MockRouteNode[] =>
-    menus
-      .filter(
-        (menu) =>
-          menu.parentId === parentId &&
-          menu.status === 'active' &&
-          menu.type !== 'button',
-      )
-      .sort((a, b) => a.order - b.order)
-      .flatMap((menu): MockRouteNode[] => {
-        if (menu.type === 'directory') {
-          const children = walk(menu.id);
-          // 空目录不注册，避免生成一个没有页面的分组路由
-          return children.length
-            ? [
-                {
-                  name: menu.name,
-                  path: menu.path,
-                  icon: menu.icon,
-                  order: menu.order,
-                  children,
-                },
-              ]
-            : [];
-        }
-        // 普通角色只返回被授权的菜单；超级管理员不传 permissions
-        if (permissions && !permissions.has(menu.id)) return [];
-        if (!menu.path || !menu.component) return [];
-        return [
-          {
-            name: menu.name,
-            path: menu.path,
-            component: menu.component,
-            icon: menu.icon,
-            layoutMode: menu.layoutMode ?? 'fill',
-            order: menu.order,
-          },
-        ];
-      });
-
-  return walk(null);
-}
-
-/** 全量路由，主要用于没有当前用户上下文时的检查/调试 */
-export function buildDynamicRoutes() {
-  return buildRoutes();
-}
-
-/** 按当前登录用户的角色权限生成路由；没有用户或角色时返回空菜单 */
-export function buildDynamicRoutesForUser(username?: string) {
-  const user = users.find((item) => item.username === username);
-  if (!user || user.status !== 'active') return [];
-  const userRoles = roles.filter(
-    (role) => user.roleIds.includes(role.id) && role.status === 'active',
-  );
-  if (userRoles.some((role) => role.code === 'SUPER_ADMIN')) {
-    return buildRoutes();
-  }
-  const permissions = new Set(userRoles.flatMap((role) => role.permissionIds));
-  return buildRoutes(permissions);
-}

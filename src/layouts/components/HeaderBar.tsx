@@ -6,11 +6,15 @@ import {
   FullscreenOutlined,
   LogoutOutlined,
   MenuOutlined,
+  RightOutlined,
+  SettingOutlined,
 } from '@ant-design/icons';
+import { history } from '@umijs/max';
 import type { BreadcrumbProps } from 'antd';
 import { Avatar, Breadcrumb, Button, Dropdown, Layout, Tooltip } from 'antd';
 import React, { useEffect, useMemo, useState } from 'react';
 import styles from '../index.less';
+import { getMenuIcon } from './menu-icons';
 import SearchMenu from './SearchMenu';
 
 const { Header } = Layout;
@@ -22,6 +26,7 @@ interface HeaderBarProps {
   userName: string;
   avatar?: string;
   onToggleSider: () => void;
+  onOpenSettings: () => void;
   onLogout: () => void;
 }
 
@@ -32,6 +37,7 @@ const HeaderBar: React.FC<HeaderBarProps> = ({
   userName,
   avatar,
   onToggleSider,
+  onOpenSettings,
   onLogout,
 }) => {
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -46,24 +52,31 @@ const HeaderBar: React.FC<HeaderBarProps> = ({
     };
   }, []);
 
-  /**
-   * 面包屑完全取自路由链：
-   * /system/user -> 系统管理 / 用户管理，不再额外拼「首页」
-   */
-  const breadcrumbItems = useMemo<BreadcrumbProps['items']>(
-    () =>
-      getBreadcrumbChain(pathname, routes).map((route, index, chain) => {
-        const last = index === chain.length - 1;
-        return {
-          title: (
-            <span className={last ? styles.crumbCurrent : styles.crumbMuted}>
-              {route.name}
-            </span>
-          ),
-        };
-      }),
-    [pathname, routes],
-  );
+  /** 面包屑严格取自路由链，父级可点击返回。 */
+  const breadcrumbItems = useMemo<BreadcrumbProps['items']>(() => {
+    const chain = getBreadcrumbChain(pathname, routes);
+    return chain.map((route, index) => {
+      const last = index === chain.length - 1;
+      const icon = getMenuIcon(route.icon, 0);
+      return {
+        title: last ? (
+          <span className={styles.crumbCurrent} title={route.name}>
+            {icon ? <span className={styles.crumbIcon}>{icon}</span> : null}
+            {route.name}
+          </span>
+        ) : (
+          <button
+            type="button"
+            className={styles.crumbItem}
+            onClick={() => history.push(route.path)}
+          >
+            {icon ? <span className={styles.crumbIcon}>{icon}</span> : null}
+            {route.name}
+          </button>
+        ),
+      };
+    });
+  }, [pathname, routes]);
 
   const toggleFullscreen = () => {
     if (document.fullscreenElement) {
@@ -89,7 +102,7 @@ const HeaderBar: React.FC<HeaderBarProps> = ({
         <Breadcrumb
           className={styles.breadcrumb}
           items={breadcrumbItems}
-          separator={<span className={styles.crumbSeparator}>/</span>}
+          separator={<RightOutlined className={styles.crumbSeparator} />}
         />
       </div>
 
@@ -132,7 +145,8 @@ const HeaderBar: React.FC<HeaderBarProps> = ({
               src={avatar}
               className={styles.avatar}
               style={{
-                background: 'linear-gradient(135deg, #60a5fa, #2563eb)',
+                background:
+                  'linear-gradient(135deg, var(--app-primary-light), var(--app-primary))',
               }}
             >
               {userName?.slice(0, 1) || 'U'}
@@ -141,6 +155,16 @@ const HeaderBar: React.FC<HeaderBarProps> = ({
             <DownOutlined className={styles.userArrow} />
           </button>
         </Dropdown>
+
+        <Tooltip title="界面设置">
+          <Button
+            type="text"
+            className={[styles.iconButton, styles.settingsButton].join(' ')}
+            icon={<SettingOutlined />}
+            onClick={onOpenSettings}
+            aria-label="界面设置"
+          />
+        </Tooltip>
       </div>
     </Header>
   );

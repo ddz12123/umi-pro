@@ -11,7 +11,7 @@ import {
 } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
 import { Button, Menu, Tooltip } from 'antd';
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import styles from '../index.less';
 import { getMenuIcon } from './menu-icons';
 
@@ -43,6 +43,7 @@ function buildMenuItems(nodes: AppRoute[], depth = 0): AntdMenuItem[] {
         key: node.path,
         icon: getMenuIcon(node.icon, depth),
         label: node.name,
+        popupClassName: styles.menuPopup,
         children,
       });
       return;
@@ -72,6 +73,19 @@ const Sidebar: React.FC<SidebarProps> = ({
   onToggleCollapse,
 }) => {
   const menuItems = useMemo(() => buildMenuItems(routes), [routes]);
+  /** 折叠态下悬停/点击分组时的弹出菜单展开项，与内联展开状态相互独立 */
+  const [popupOpenKeys, setPopupOpenKeys] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (!collapsed) setPopupOpenKeys([]);
+  }, [collapsed]);
+
+  /** 折叠/展开前先清掉弹层展开态，避免切换瞬间残留悬浮菜单 */
+  const handleToggleCollapse = () => {
+    setPopupOpenKeys([]);
+    onToggleCollapse?.();
+  };
+
   const homePath = useMemo(
     () =>
       getAffixPaths(routes)[0] ??
@@ -97,13 +111,11 @@ const Sidebar: React.FC<SidebarProps> = ({
         }}
         title={collapsed ? SYSTEM_NAME : undefined}
       >
-        <Logo size={collapsed ? 32 : 34} />
-        {!collapsed ? (
-          <div className={styles.brandText}>
-            <span className={styles.brandName}>{SYSTEM_NAME}</span>
-            <span className={styles.brandSub}>{appConfig.subtitle}</span>
-          </div>
-        ) : null}
+        <Logo size={32} />
+        <div className={styles.brandText}>
+          <span className={styles.brandName}>{SYSTEM_NAME}</span>
+          <span className={styles.brandSub}>{appConfig.subtitle}</span>
+        </div>
         {mobile ? (
           <Button
             type="text"
@@ -121,14 +133,20 @@ const Sidebar: React.FC<SidebarProps> = ({
 
       <div className={styles.menuWrap}>
         <Menu
+          key={collapsed ? 'collapsed' : 'expanded'}
           theme="dark"
           mode="inline"
+          inlineIndent={20}
           inlineCollapsed={collapsed}
           items={menuItems}
           selectedKeys={[activePath]}
-          openKeys={collapsed ? [] : openKeys}
+          openKeys={collapsed ? popupOpenKeys : openKeys}
           onOpenChange={(keys) => {
-            if (!collapsed) onOpenChange(keys);
+            if (collapsed) {
+              setPopupOpenKeys(keys);
+              return;
+            }
+            onOpenChange(keys);
           }}
           onClick={({ key }) => onNavigate(key)}
           className={styles.menu}
@@ -141,9 +159,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           collapsed ? styles.footerCollapsed : '',
         ].join(' ')}
       >
-        {!collapsed ? (
-          <span className={styles.version}>v{appConfig.version}</span>
-        ) : null}
+        <span className={styles.version}>v{appConfig.version}</span>
         {!mobile && onToggleCollapse ? (
           <Tooltip
             title={collapsed ? '展开菜单' : '收起菜单'}
@@ -153,10 +169,10 @@ const Sidebar: React.FC<SidebarProps> = ({
               type="text"
               className={styles.collapseBtn}
               icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
-              onClick={onToggleCollapse}
+              onClick={handleToggleCollapse}
               aria-label={collapsed ? '展开菜单' : '收起菜单'}
             >
-              {collapsed ? null : '收起'}
+              <span className={styles.collapseText}>收起</span>
             </Button>
           </Tooltip>
         ) : null}

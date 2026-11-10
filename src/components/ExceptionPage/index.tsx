@@ -1,5 +1,5 @@
-import { DEFAULT_ROUTE_PATH, getAffixPaths } from '@/router';
-import { useRouteStore } from '@/stores/routes';
+import { DEFAULT_ROUTE_PATH, getAffixPaths, staticRoutes } from '@/router';
+import { doneProgress } from '@/utils/progress';
 import { Button } from 'antd';
 import React from 'react';
 import styles from './index.less';
@@ -50,10 +50,15 @@ const ExceptionPage: React.FC<ExceptionPageProps> = ({
   const meta = STATUS_META[status];
   const isDev = process.env.NODE_ENV === 'development';
 
+  React.useEffect(() => {
+    doneProgress();
+  }, [status]);
+
   const goHome = () => {
-    const routes = useRouteStore.getState().routes;
     // 异常页是全屏页面，根级 ErrorBoundary 下路由可能已卸载，用整页跳转更可靠
-    window.location.assign(getAffixPaths(routes)[0] ?? DEFAULT_ROUTE_PATH);
+    window.location.assign(
+      getAffixPaths(staticRoutes)[0] ?? DEFAULT_ROUTE_PATH,
+    );
   };
   const goBack = () => {
     if (window.history.length > 1) {

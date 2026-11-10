@@ -32,39 +32,37 @@ pnpm build         # 生产构建，输出 dist
 | `src/config/request.ts` | 统一鉴权、接口错误、网络错误和取消请求处理 |
 | `src/config/theme.ts` | Ant Design 主题 |
 | `src/router/paths.ts` | 框架路径常量，不依赖页面或状态管理 |
-| `src/router/static-routes.ts` | 登录、首页、异常页等静态路由与 Umi 配置生成 |
-| `src/router/page-registry.ts` | 页面组件白名单与懒加载 |
-| `src/router/normalize.ts` | 外部路由的结构、组件和路径校验 |
-| `src/router/catalog.ts` / `tree.ts` | 页面树的校验入口、遍历与分组默认页选择 |
+| `src/router/static-routes.ts` | 页面静态路由、菜单权限码与 Umi 路由配置生成 |
+| `src/router/tree.ts` | 路由树遍历与分组默认页选择 |
 | `src/router/routes.ts` | 使用 React Router 匹配菜单、面包屑、页签和标题 |
-| `src/router/DynamicRoute.tsx` / `runtime.tsx` | 页面渲染、分组跳转与接口路由注册 |
+| `src/router/GroupRedirect.tsx` | 分组路径跳转到当前账号可见的默认子页面 |
 | `src/components/SessionSync` | 应用级会话过期检查与跨窗口同步 |
-| `src/hooks/useAccess.ts` | 按钮权限判断 |
-| `src/services` | 接口适配；认证、动态路由、RBAC 与示例各自独立 |
-| `src/stores` | 路由加载状态、页签状态 |
+| `src/access.ts` | Ant Design Pro 风格的权限定义：菜单过滤、页面访问与按钮权限 |
+| `src/hooks` | 权限入口 `useAccess` 与按 access 过滤后的菜单路由 |
+| `src/services` | 接口适配；认证、RBAC 与示例各自独立 |
+| `src/stores` | 页签状态 |
 | `src/layouts` | 导航、面包屑、搜索、页签、移动端布局 |
 | `src/utils` | 请求方法、响应适配、认证存储与统一退出 |
 | `src/pages` | 页面内容与页面私有逻辑 |
-| `mock` | 开发接口；动态路由、RBAC 与示例 CRUD |
+| `mock` | 开发接口；RBAC 与示例 CRUD |
 
-`src/app.tsx` 只组合 Umi 运行时钩子、主题、全局反馈、会话同步与错误边界。页面通过 `services` 和 `utils/request` 调用接口；请求配置负责全局拦截，状态层负责保存已校验的路由，布局只消费路由元信息。替换某个页面时，无需修改布局、请求层或会话清理逻辑。
+`src/app.tsx` 只组合 Umi 运行时钩子、主题、全局反馈、会话同步与错误边界。页面通过 `services` 和 `utils/request` 调用接口；请求配置负责全局拦截，状态层负责按权限生成菜单路由，布局只消费路由元信息。替换某个页面时，无需修改布局、请求层或会话清理逻辑。
 
 ## 页面与路由
 
-路由固定分成两部分：
+页面路由全部在前端静态声明：
 
-- **静态路由**：`src/router/static-routes.ts` 中的登录、首页、404、500 和根重定向。
-- **动态路由**：登录后由 `/api/v1/routes` 返回，开发环境由 `mock/routes.ts` 提供。
+- **静态路由**：`src/router/static-routes.ts` 中维护登录、首页、系统管理、示例页、404、500 和根重定向。
+- **权限控制**：登录接口返回 `permissions.menus`，`src/access.ts` 的 `normalRouteFilter` 按路由上的 `access` 字段过滤菜单；页面级访问也会校验，无权限时直接展示 403。
 
-页面组件在 `page-registry.ts` 登记；接口路由的 `component` 只能引用注册表 key。接口数据在运行时校验，菜单、面包屑、页面搜索、页签和浏览器标题都从同一棵路由树生成。
-
-注册表 `PAGE_LOADERS` 使用静态 `import()` 加载函数，`component` 不必与页面目录名一致；所有页面统一由 `DynamicRoute` 懒加载。
+Umi 路由由静态路由树生成，`component` 直接指向 `src/pages` 下的真实文件，构建期完成代码分割，不再需要运行时组件映射表。
 
 ```ts
 {
   name: '列表示例',
   path: '/example',
-  component: 'Example', // 页面注册表中的 key
+  component: 'Example', // 相对 src/pages 的页面路径
+  access: 'example:list', // 登录接口下发的菜单权限码
   icon: 'table',
   layoutMode: 'fill',
 }
@@ -87,29 +85,27 @@ pnpm build         # 生产构建，输出 dist
 
 框架保留 `/login`、`/home`、`/exception/404`、`/exception/500` 和根重定向。页面树不能使用这些路径，也不能通过大小写差异覆盖它们。图标 key 在 `layouts/components/menu-icons.tsx` 集中映射。
 
-### 动态业务路由
+### 菜单权限与页面访问
 
-`services/routes.ts` 负责取得当前用户的页面树；开发环境由 `mock/routes.ts` 从权限管理数据生成，并按当前登录用户的角色权限过滤。登录接口同时返回 `roles`、`permissions.menus` 和 `permissions.buttons`。
+登录接口同时返回 `roles`、`permissions.menus` 和 `permissions.buttons`。菜单权限决定静态路由是否进入侧边栏、搜索和页签；按钮权限由 `useAccess` 控制页面内的新增、编辑、删除、授权等操作。
 
-接口数据中的 `component` 必须是注册过的组件 key。未知组件、重复路径、保留路径、非法结构会拒绝整次加载；参数名不同但模式相同的路径也视为冲突，例如 `/items/:id` 和 `/items/:code`。失败时显示错误和重试入口。
+菜单不再由接口生成，接口只需要返回权限码。新增页面时在 `static-routes.ts` 里补一条路由并配置 `access`，再把对应权限码分配给角色即可。
 
-首次渲染前加载路由，再通过 `patchClientRoutes` 注册。请求按当前会话去重，退出或切换账号会取消旧请求，迟到响应不会覆盖新账号菜单。每次注册先移除框架上次注入的节点，再生成当前页面，避免残留已移除的路由或旧布局；注册失败同样进入错误状态。
-
-Umi 的 `patchClientRoutes` 在创建 Router 时执行，单独调用 `loadRoutes()` 不会热更新正在运行的 Router。登录、退出、跨窗口换号和需要刷新权限时使用整页跳转重新初始化。
+登录或切换账号后整页跳转重建菜单；无权限的地址即使手动输入也只展示 403，不会渲染页面内容。
 
 ### RBAC 系统管理
 
 - **用户管理**：账号 CRUD、角色分配、状态管理。
 - **角色管理**：角色 CRUD、菜单权限和按钮权限授权。
-- **权限管理**：维护菜单目录、菜单页面和按钮权限；菜单权限生成动态路由，按钮权限控制页面操作。
+- **权限管理**：维护菜单目录、菜单页面和按钮权限；菜单权限控制菜单可见性和页面访问，按钮权限控制页面操作。
 
-登录后由 `mock/routes.ts` 按角色返回可见路由；页面内的新建、编辑、删除、授权按钮由 `useAccess` 根据按钮权限码控制，Mock 写接口也会再次校验权限。
+登录接口返回角色和两类权限码；页面内的新建、编辑、删除、授权按钮由 `useAccess` 根据按钮权限码控制，Mock 写接口也会再次校验权限。
 
 开发演示账号：`admin / 123456`（超级管理员）、`operator / 123456`（运营管理员）、`viewer / 123456`（审计员）。
 
 ## 接入真实接口
 
-在 `services/auth.ts` 和 `services/routes.ts` 中适配实际接口地址、入参与返回值。认证适配层向框架返回：
+在 `services/auth.ts` 中适配实际接口地址、入参与返回值。认证适配层向框架返回：
 
 ```ts
 {

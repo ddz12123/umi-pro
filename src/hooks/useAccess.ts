@@ -1,23 +1,32 @@
+import accessFactory from '@/access';
 import { useModel } from '@umijs/max';
+import { useMemo } from 'react';
+
+const EMPTY_PERMISSIONS: string[] = [];
 
 /**
- * 权限判断：
- * - menuPermissions 控制可访问的菜单/页面
- * - buttonPermissions 控制页面内的新增、编辑、删除、授权等操作
+ * Ant Design Pro 风格的统一权限入口
+ * - normalRouteFilter / hasMenuPermission 控制菜单和页面访问
+ * - hasPermission 控制页面内的新增、编辑、删除、授权等操作
  */
 export function useAccess() {
   const { initialState } = useModel('@@initialState');
-  const menuPermissions = initialState?.menuPermissions ?? [];
-  const buttonPermissions = initialState?.buttonPermissions ?? [];
-  const buttons = new Set(buttonPermissions);
+  const menuPermissions = initialState?.menuPermissions ?? EMPTY_PERMISSIONS;
+  const buttonPermissions =
+    initialState?.buttonPermissions ?? EMPTY_PERMISSIONS;
+  const access = useMemo(
+    () => accessFactory({ menuPermissions, buttonPermissions }),
+    [menuPermissions, buttonPermissions],
+  );
 
   return {
+    ...access,
     roles: initialState?.roles ?? [],
     menuPermissions,
     buttonPermissions,
-    hasPermission: (code: string) => buttons.has(code),
+    hasPermission: access.hasButtonAccess,
     hasAnyPermission: (codes: string[]) =>
-      codes.some((code) => buttons.has(code)),
-    hasMenuPermission: (code: string) => menuPermissions.includes(code),
+      codes.some((code) => access.hasButtonAccess(code)),
+    hasMenuPermission: access.hasMenuAccess,
   };
 }
