@@ -16,6 +16,7 @@ export function flattenAppRoutes(
   });
 }
 
+/** 提取路径中的动态参数名，例如 /user/:id -> ['id']。 */
 export function getPathParameters(path: string): string[] {
   return path
     .split('/')
@@ -23,6 +24,7 @@ export function getPathParameters(path: string): string[] {
     .map((segment) => segment.slice(1));
 }
 
+/** 是否为无通配符、无动态参数、可直接访问的路径。 */
 export function isConcretePath(path: string): boolean {
   return !path.includes('*') && getPathParameters(path).length === 0;
 }

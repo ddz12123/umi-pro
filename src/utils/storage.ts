@@ -37,5 +37,7 @@ function createStorage(type: StorageType): StorageAdapter {
   };
 }
 
+/** 长期存储：关闭浏览器后仍保留。 */
 export const local = createStorage('local');
+/** 会话存储：关闭当前标签页后清空。 */
 export const session = createStorage('session');

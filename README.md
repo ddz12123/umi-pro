@@ -1,6 +1,6 @@
 # Umi 基础框架
 
-基于 Umi Max 4、React 18、Ant Design 6、ProComponents 3 和 Zustand 5 的起步框架。保留登录、首页、列表示例和 404 / 500 页面，公共布局不依赖示例数据或特定业务模块。
+基于 Umi Max 4、React 18、Ant Design 6、ProComponents 3 和 Zustand 5 的起步框架。保留登录、首页、列表示例、RBAC 系统管理和 404 / 500 页面。静态路由只有首页和异常页，业务路由由接口按权限下发。
 
 ## 开始使用
 
@@ -11,7 +11,7 @@ pnpm install --frozen-lockfile
 pnpm dev
 ```
 
-开发环境默认启用 Mock，演示账号为 `admin / 123456`。本地菜单直接可用，启动不请求后端菜单接口。Mock 只在开发服务中运行，生产构建会关闭 Mock 和演示账号提示。
+开发环境默认启用 Mock，演示账号为 `admin / operator / viewer`，密码均为 `123456`。业务菜单由 Mock 的 `/api/v1/routes` 返回；首页和异常页是前端静态路由。Mock 只在开发服务中运行，生产构建会关闭 Mock 和演示账号提示。
 
 ```bash
 pnpm lint          # ESLint + Stylelint
@@ -27,33 +27,38 @@ pnpm build         # 生产构建，输出 dist
 
 | 位置 | 职责 |
 | --- | --- |
-| `src/config/app.ts` | 应用名称、品牌说明、版本、存储命名空间、路由来源、页签开关与上限 |
+| `src/config/app.ts` | 应用名称、品牌说明、版本、存储命名空间、登录态存储方式、页签开关与上限 |
 | `src/config/api.ts` | API 地址、超时、响应字段、成功码与会话失效码 |
 | `src/config/request.ts` | 统一鉴权、接口错误、网络错误和取消请求处理 |
 | `src/config/theme.ts` | Ant Design 主题 |
 | `src/router/paths.ts` | 框架路径常量，不依赖页面或状态管理 |
-| `src/router/static-routes.ts` | 登录、首页、异常页等框架保留路由与 Umi 配置生成 |
-| `src/router/local-routes.ts` | 本地页面树，默认只有现有列表示例 |
+| `src/router/static-routes.ts` | 登录、首页、异常页等静态路由与 Umi 配置生成 |
 | `src/router/page-registry.ts` | 页面组件白名单与懒加载 |
 | `src/router/normalize.ts` | 外部路由的结构、组件和路径校验 |
 | `src/router/catalog.ts` / `tree.ts` | 页面树的校验入口、遍历与分组默认页选择 |
 | `src/router/routes.ts` | 使用 React Router 匹配菜单、面包屑、页签和标题 |
-| `src/router/DynamicRoute.tsx` / `runtime.tsx` | 页面渲染、分组跳转与后端路由注册 |
+| `src/router/DynamicRoute.tsx` / `runtime.tsx` | 页面渲染、分组跳转与接口路由注册 |
 | `src/components/SessionSync` | 应用级会话过期检查与跨窗口同步 |
-| `src/services` | 接口适配；认证、菜单与列表示例各自独立 |
+| `src/hooks/useAccess.ts` | 按钮权限判断 |
+| `src/services` | 接口适配；认证、动态路由、RBAC 与示例各自独立 |
 | `src/stores` | 路由加载状态、页签状态 |
 | `src/layouts` | 导航、面包屑、搜索、页签、移动端布局 |
 | `src/utils` | 请求方法、响应适配、认证存储与统一退出 |
 | `src/pages` | 页面内容与页面私有逻辑 |
-| `mock` | 开发接口；示例 CRUD 使用 `/api/demo/users`，不占用应用业务 API |
+| `mock` | 开发接口；动态路由、RBAC 与示例 CRUD |
 
 `src/app.tsx` 只组合 Umi 运行时钩子、主题、全局反馈、会话同步与错误边界。页面通过 `services` 和 `utils/request` 调用接口；请求配置负责全局拦截，状态层负责保存已校验的路由，布局只消费路由元信息。替换某个页面时，无需修改布局、请求层或会话清理逻辑。
 
 ## 页面与路由
 
-默认 `appConfig.routing.source = 'local'`。页面组件在 `page-registry.ts` 登记，路由元信息在 `local-routes.ts` 维护；框架从同一棵树生成菜单、面包屑、页面搜索、页签与浏览器标题。
+路由固定分成两部分：
 
-注册表 `PAGE_LOADERS` 使用静态 `import()` 加载函数，`component` 只引用注册表的 key，不必与页面目录名一致。本地配置的组件 key 受 TypeScript 检查，接口数据在运行时校验；两种来源均由 `DynamicRoute` 懒加载页面。
+- **静态路由**：`src/router/static-routes.ts` 中的登录、首页、404、500 和根重定向。
+- **动态路由**：登录后由 `/api/v1/routes` 返回，开发环境由 `mock/routes.ts` 提供。
+
+页面组件在 `page-registry.ts` 登记；接口路由的 `component` 只能引用注册表 key。接口数据在运行时校验，菜单、面包屑、页面搜索、页签和浏览器标题都从同一棵路由树生成。
+
+注册表 `PAGE_LOADERS` 使用静态 `import()` 加载函数，`component` 不必与页面目录名一致；所有页面统一由 `DynamicRoute` 懒加载。
 
 ```ts
 {
@@ -82,15 +87,25 @@ pnpm build         # 生产构建，输出 dist
 
 框架保留 `/login`、`/home`、`/exception/404`、`/exception/500` 和根重定向。页面树不能使用这些路径，也不能通过大小写差异覆盖它们。图标 key 在 `layouts/components/menu-icons.tsx` 集中映射。
 
-### 可选后端路由
+### 动态业务路由
 
-将 `appConfig.routing.source` 改为 `remote`，重启开发服务或重新构建。`services/routes.ts` 负责取得当前用户的页面树；开发 Mock 返回同一份列表示例。
+`services/routes.ts` 负责取得当前用户的页面树；开发环境由 `mock/routes.ts` 从权限管理数据生成，并按当前登录用户的角色权限过滤。登录接口同时返回 `roles`、`permissions.menus` 和 `permissions.buttons`。
 
-接口数据格式与上面的本地路由一致，`component` 必须是注册过的组件 key。未知组件、重复路径、保留路径、非法结构会拒绝整次加载。参数名不同但模式相同的路径也视为冲突，例如 `/items/:id` 和 `/items/:code`。失败时显示错误和重试入口，不把本地示例当作用户权限菜单。
+接口数据中的 `component` 必须是注册过的组件 key。未知组件、重复路径、保留路径、非法结构会拒绝整次加载；参数名不同但模式相同的路径也视为冲突，例如 `/items/:id` 和 `/items/:code`。失败时显示错误和重试入口。
 
 首次渲染前加载路由，再通过 `patchClientRoutes` 注册。请求按当前会话去重，退出或切换账号会取消旧请求，迟到响应不会覆盖新账号菜单。每次注册先移除框架上次注入的节点，再生成当前页面，避免残留已移除的路由或旧布局；注册失败同样进入错误状态。
 
-Umi 的 `patchClientRoutes` 在创建 Router 时执行，单独调用 `loadRoutes()` 不会热更新正在运行的 Router。后端模式的登录、退出和跨窗口换号使用整页跳转重新初始化；需要刷新权限时也应重新加载页面。本地模式的登录与退出使用应用内导航。
+Umi 的 `patchClientRoutes` 在创建 Router 时执行，单独调用 `loadRoutes()` 不会热更新正在运行的 Router。登录、退出、跨窗口换号和需要刷新权限时使用整页跳转重新初始化。
+
+### RBAC 系统管理
+
+- **用户管理**：账号 CRUD、角色分配、状态管理。
+- **角色管理**：角色 CRUD、菜单权限和按钮权限授权。
+- **权限管理**：维护菜单目录、菜单页面和按钮权限；菜单权限生成动态路由，按钮权限控制页面操作。
+
+登录后由 `mock/routes.ts` 按角色返回可见路由；页面内的新建、编辑、删除、授权按钮由 `useAccess` 根据按钮权限码控制，Mock 写接口也会再次校验权限。
+
+开发演示账号：`admin / 123456`（超级管理员）、`operator / 123456`（运营管理员）、`viewer / 123456`（审计员）。
 
 ## 接入真实接口
 
@@ -101,8 +116,15 @@ Umi 的 `patchClientRoutes` 在创建 Router 时执行，单独调用 `loadRoute
   token: string;
   expiresIn?: number; // 有效秒数；省略时由服务端决定会话失效
   user?: { id?: string; name?: string; nickName?: string; avatar?: string };
+  roles?: Array<{ id: string; name: string; code: string }>;
+  permissions?: {
+    menus: string[];   // 菜单/页面权限码
+    buttons: string[]; // 页面按钮权限码
+  };
 }
 ```
+
+登录态会一并缓存 `roles` 与 `permissions`，`getInitialState` 恢复为 `roles`、`menuPermissions`、`buttonPermissions`，页面按钮通过 `useAccess` 判断。
 
 开发时可以通过进程环境变量关闭 Mock、指定 API 来源。以 PowerShell 为例：
 

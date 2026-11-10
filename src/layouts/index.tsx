@@ -212,7 +212,13 @@ const BasicLayout: React.FC = () => {
   };
 
   const handleLogout = () => {
-    setInitialState({ name: '', avatar: undefined });
+    setInitialState({
+      name: '',
+      avatar: undefined,
+      roles: [],
+      menuPermissions: [],
+      buttonPermissions: [],
+    });
     endSession(false);
   };
 

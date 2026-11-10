@@ -1,0 +1,71 @@
+@import '../../styles/table-layout.less';
+
+/* 系统管理三个页面共用：让 ProTable 在 fill 布局里撑满内容区 */
+.tableWrap {
+  :global {
+    .table-layout();
+  }
+
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.userCell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.userName {
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.userAccount {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.permissionTree {
+  max-height: 420px;
+  padding: 8px 10px;
+  overflow: auto;
+  background: #fbfcfe;
+  border: 1px solid #eef2f7;
+  border-radius: 8px;
+}
+
+.permissionNode {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.permissionType {
+  padding: 0 5px;
+  font-size: 10px;
+  line-height: 17px;
+  color: #64748b;
+  background: #f1f5f9;
+  border-radius: 4px;
+}
+
+.permissionCode {
+  font-family: SFMono-Regular, Consolas, 'Liberation Mono', monospace;
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.menuName {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.menuIcon {
+  color: #64748b;
+}

@@ -1,8 +1,17 @@
+import type { PageComponentKey } from './page-registry';
+
 /** 页面布局模式：fill 撑满（表格页），page 自身滚动（工作台/详情页） */
 export type LayoutMode = 'fill' | 'page';
 
-/** 图标在 src/layouts/components/menu-icons.tsx 中映射 */
-export const routeIconKeys = ['dashboard', 'table', 'system', 'user'] as const;
+/** 图标 key 白名单，统一在 src/layouts/components/menu-icons.tsx 中映射。 */
+export const routeIconKeys = [
+  'dashboard',
+  'table',
+  'system',
+  'user',
+  'role',
+  'menu',
+] as const;
 export type RouteIcon = (typeof routeIconKeys)[number];
 
 export interface AppRoute {
@@ -43,4 +52,3 @@ export interface UmiRouteConfig {
   layout?: boolean;
   wrappers?: string[];
 }
-import type { PageComponentKey } from './page-registry';

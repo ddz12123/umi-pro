@@ -12,6 +12,7 @@ export interface RouteMatch {
   chain: AppRoute[];
 }
 
+/** 为菜单、面包屑、搜索和路由匹配建立一次性索引。 */
 function buildRouteIndex(routes: AppRoute[]) {
   const entries = flattenAppRoutes(routes);
   return {
@@ -38,6 +39,7 @@ function getRouteIndex(routes: AppRoute[]) {
   return index;
 }
 
+/** 使用 React Router 的匹配规则解析路径，保证与真实路由行为一致。 */
 function resolveRoute(
   path: string,
   routes: AppRoute[],
@@ -62,6 +64,7 @@ export function matchRoute(
   );
 }
 
+/** 当前地址是否为菜单分组，用于分组地址自动跳到默认子页面。 */
 export function findGroupRoute(
   pathname: string,
   routes: AppRoute[] = staticRoutes,
@@ -70,6 +73,7 @@ export function findGroupRoute(
   return matched?.route.children?.length ? matched.route : undefined;
 }
 
+/** 面包屑链路，过滤掉显式隐藏的层级。 */
 export function getBreadcrumbChain(
   pathname: string,
   routes: AppRoute[] = staticRoutes,
@@ -79,6 +83,7 @@ export function getBreadcrumbChain(
   );
 }
 
+/** 侧边栏需要展开的父级路径。 */
 export function getParentPaths(
   pathname: string,
   routes: AppRoute[] = staticRoutes,
@@ -100,6 +105,7 @@ export function findRouteByComponent(
   )?.route;
 }
 
+/** 固定页签路径，只保留无需参数且布局内可见的页面。 */
 export function getAffixPaths(routes: AppRoute[] = staticRoutes): string[] {
   return getRouteIndex(routes)
     .leaves.filter(
@@ -112,6 +118,7 @@ export function getAffixPaths(routes: AppRoute[] = staticRoutes): string[] {
     .map(({ route }) => route.path);
 }
 
+/** 浏览器标题：页面名称 + 系统名称。 */
 export function getRouteTitle(
   pathname: string,
   routes: AppRoute[] = staticRoutes,
@@ -126,6 +133,7 @@ export interface SearchEntry {
   trail: string[];
 }
 
+/** 顶部搜索索引，排除隐藏菜单和带参数的详情页。 */
 export function getSearchEntries(
   routes: AppRoute[] = staticRoutes,
 ): SearchEntry[] {

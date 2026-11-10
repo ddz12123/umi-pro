@@ -2,16 +2,32 @@ import { appConfig } from '@/config/app';
 import { LOGIN_PATH, isLoginPath } from '@/router/paths';
 import { local, session } from './storage';
 
+export interface AuthRole {
+  id: string;
+  name: string;
+  code: string;
+}
+
+/** 登录接口返回的两类权限：菜单权限决定路由，按钮权限决定页面操作 */
+export interface AuthPermissionSet {
+  menus: string[];
+  buttons: string[];
+}
+
 export interface AuthUser {
   id?: string;
   name?: string;
   nickName?: string;
   avatar?: string;
+  roles?: AuthRole[];
+  permissions?: AuthPermissionSet;
 }
 
+/** token 存储 key；SessionSync 也用它监听跨窗口登录态变化。 */
 export const AUTH_STORAGE_KEY = `${appConfig.storagePrefix}:token`;
 const USER_KEY = `${appConfig.storagePrefix}:user`;
 const EXPIRE_AT_KEY = `${appConfig.storagePrefix}:expire-at`;
+/** 根据配置选择 localStorage / sessionStorage，读写都走同一适配器。 */
 const storage = appConfig.auth.storage === 'local' ? local : session;
 
 /** 登录成功后写入 token、过期时间与用户信息 */
@@ -38,6 +54,7 @@ export function setAuth(token: string, expiresIn?: number, user?: AuthUser) {
   storage.setItem(AUTH_STORAGE_KEY, token);
 }
 
+/** 清空 token、用户信息和过期时间，供退出登录和会话失效共用。 */
 export function clearAuth() {
   storage.removeItem(AUTH_STORAGE_KEY);
   storage.removeItem(USER_KEY);
@@ -63,6 +80,7 @@ export function getToken(): string {
   return token;
 }
 
+/** 读取缓存的登录用户；数据损坏或未登录时返回 undefined。 */
 export function getAuthUser(): AuthUser | undefined {
   if (!getToken()) return undefined;
   const raw = storage.getItem(USER_KEY);
@@ -72,17 +90,53 @@ export function getAuthUser(): AuthUser | undefined {
     if (!user || typeof user !== 'object' || Array.isArray(user))
       return undefined;
     const value = user as Record<string, unknown>;
+    const rawRoles = Array.isArray(value.roles) ? value.roles : [];
+    const roles: AuthRole[] = rawRoles.flatMap((item) => {
+      if (!item || typeof item !== 'object' || Array.isArray(item)) return [];
+      const role = item as Record<string, unknown>;
+      if (
+        typeof role.id !== 'string' ||
+        typeof role.name !== 'string' ||
+        typeof role.code !== 'string'
+      ) {
+        return [];
+      }
+      return [{ id: role.id, name: role.name, code: role.code }];
+    });
+    const rawPermissions =
+      value.permissions &&
+      typeof value.permissions === 'object' &&
+      !Array.isArray(value.permissions)
+        ? (value.permissions as Record<string, unknown>)
+        : undefined;
+    const permissions = rawPermissions
+      ? {
+          menus: Array.isArray(rawPermissions.menus)
+            ? rawPermissions.menus.filter(
+                (item): item is string => typeof item === 'string',
+              )
+            : [],
+          buttons: Array.isArray(rawPermissions.buttons)
+            ? rawPermissions.buttons.filter(
+                (item): item is string => typeof item === 'string',
+              )
+            : [],
+        }
+      : undefined;
     return {
       id: typeof value.id === 'string' ? value.id : undefined,
       name: typeof value.name === 'string' ? value.name : undefined,
       nickName: typeof value.nickName === 'string' ? value.nickName : undefined,
       avatar: typeof value.avatar === 'string' ? value.avatar : undefined,
+      roles,
+      permissions,
     };
   } catch {
     return undefined;
   }
 }
 
+/** 是否处于登录态（会顺带校验 token 过期时间）。 */
 export function isLogin(): boolean {
   return !!getToken();
 }

@@ -1,8 +1,10 @@
 import type { RouteIcon } from '@/router';
 import {
   AppstoreOutlined,
+  MenuOutlined,
   SettingOutlined,
   TableOutlined,
+  TeamOutlined,
   UserOutlined,
 } from '@ant-design/icons';
 import React from 'react';
@@ -12,6 +14,8 @@ const MENU_ICONS: Record<RouteIcon, React.ReactNode> = {
   table: <TableOutlined />,
   system: <SettingOutlined />,
   user: <UserOutlined />,
+  role: <TeamOutlined />,
+  menu: <MenuOutlined />,
 };
 
 /** 只有一级菜单展示图标，子菜单保持纯文字，视觉更干净 */

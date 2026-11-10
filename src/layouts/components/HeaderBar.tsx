@@ -1,27 +1,17 @@
 import type { AppRoute } from '@/router';
-import { getBreadcrumbChain, getSearchEntries } from '@/router';
+import { getBreadcrumbChain } from '@/router';
 import {
   DownOutlined,
   FullscreenExitOutlined,
   FullscreenOutlined,
   LogoutOutlined,
   MenuOutlined,
-  SearchOutlined,
 } from '@ant-design/icons';
-import { history } from '@umijs/max';
-import type { BreadcrumbProps, InputRef } from 'antd';
-import {
-  AutoComplete,
-  Avatar,
-  Breadcrumb,
-  Button,
-  Dropdown,
-  Input,
-  Layout,
-  Tooltip,
-} from 'antd';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import type { BreadcrumbProps } from 'antd';
+import { Avatar, Breadcrumb, Button, Dropdown, Layout, Tooltip } from 'antd';
+import React, { useEffect, useMemo, useState } from 'react';
 import styles from '../index.less';
+import SearchMenu from './SearchMenu';
 
 const { Header } = Layout;
 
@@ -44,53 +34,14 @@ const HeaderBar: React.FC<HeaderBarProps> = ({
   onToggleSider,
   onLogout,
 }) => {
-  const [keyword, setKeyword] = useState('');
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const searchRef = useRef<InputRef>(null);
-
-  const searchEntries = useMemo(() => getSearchEntries(routes), [routes]);
-
-  const options = useMemo(
-    () =>
-      searchEntries.map((entry) => ({
-        value: entry.path,
-        search: `${entry.name} ${entry.trail.join(' ')} ${entry.path}`,
-        label: (
-          <div className={styles.searchOption}>
-            <span className={styles.searchOptionTitle}>{entry.name}</span>
-            {entry.trail.length ? (
-              <span className={styles.searchOptionTrail}>
-                {entry.trail.join(' / ')}
-              </span>
-            ) : null}
-          </div>
-        ),
-      })),
-    [searchEntries],
-  );
-
-  const filteredOptions = useMemo(() => {
-    const value = keyword.trim().toLowerCase();
-    if (!value) return options;
-    return options.filter((option) =>
-      option.search.toLowerCase().includes(value),
-    );
-  }, [keyword, options]);
 
   useEffect(() => {
-    const handleShortcut = (event: KeyboardEvent) => {
-      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
-        event.preventDefault();
-        searchRef.current?.focus();
-      }
-    };
     const handleFullscreen = () =>
       setIsFullscreen(Boolean(document.fullscreenElement));
 
-    window.addEventListener('keydown', handleShortcut);
     document.addEventListener('fullscreenchange', handleFullscreen);
     return () => {
-      window.removeEventListener('keydown', handleShortcut);
       document.removeEventListener('fullscreenchange', handleFullscreen);
     };
   }, []);
@@ -113,12 +64,6 @@ const HeaderBar: React.FC<HeaderBarProps> = ({
       }),
     [pathname, routes],
   );
-
-  const navigate = (path: string) => {
-    history.push(path);
-    setKeyword('');
-    searchRef.current?.blur();
-  };
 
   const toggleFullscreen = () => {
     if (document.fullscreenElement) {
@@ -149,28 +94,7 @@ const HeaderBar: React.FC<HeaderBarProps> = ({
       </div>
 
       <div className={styles.headerRight}>
-        <AutoComplete
-          className={styles.search}
-          value={keyword}
-          options={filteredOptions}
-          filterOption={false}
-          notFoundContent="没有匹配的页面"
-          onSelect={(value) => navigate(value)}
-          onChange={setKeyword}
-        >
-          <Input
-            ref={searchRef}
-            allowClear
-            prefix={<SearchOutlined className={styles.searchIcon} />}
-            suffix={<kbd className={styles.kbd}>Ctrl K</kbd>}
-            placeholder="搜索页面"
-            onKeyDown={(event) => {
-              if (event.key === 'Enter' && filteredOptions[0]) {
-                navigate(filteredOptions[0].value);
-              }
-            }}
-          />
-        </AutoComplete>
+        <SearchMenu routes={routes} />
 
         <Tooltip title={isFullscreen ? '退出全屏' : '全屏'}>
           <Button

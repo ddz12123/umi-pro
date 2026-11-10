@@ -1,11 +1,13 @@
 import { apiConfig } from '@/config/api';
 
+/** 后端统一业务信封。 */
 export interface ApiResult<T = unknown> {
   code: string | number;
   data: T;
   msg?: string;
 }
 
+/** 业务码失败时抛出的异常，保留原始请求配置用于判断会话是否过期。 */
 export class BizError extends Error {
   requestConfig?: {
     url?: string;
@@ -24,6 +26,7 @@ export class BizError extends Error {
   }
 }
 
+/** 判断响应是否属于配置中的业务信封。 */
 export function isApiResult(value: unknown): value is Record<string, unknown> {
   return (
     value !== null &&
@@ -32,6 +35,7 @@ export function isApiResult(value: unknown): value is Record<string, unknown> {
   );
 }
 
+/** 校验业务码；失败时统一抛 BizError。 */
 export function checkResponse(value: unknown): void {
   if (!isApiResult(value)) return;
   const { codeField, dataField, messageField, successCodes } =

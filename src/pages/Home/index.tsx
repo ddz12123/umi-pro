@@ -1,5 +1,4 @@
 import PageHeader from '@/components/PageHeader';
-import { appConfig } from '@/config/app';
 import { findRouteByComponent } from '@/router';
 import { useRouteStore } from '@/stores/routes';
 import { history, useModel } from '@umijs/max';
@@ -22,7 +21,7 @@ const FEATURES = [
   },
   {
     tag: '路由',
-    desc: '默认使用本地路由，可切换为后端路由；菜单与页面导航使用同一份配置',
+    desc: '业务路由由接口下发；菜单、面包屑与页面导航使用同一份配置',
   },
 ];
 
@@ -61,7 +60,7 @@ const HomePage: React.FC = () => {
             <Card>
               <Typography.Text type="secondary">路由来源</Typography.Text>
               <Typography.Title level={3} className={styles.statValue}>
-                {appConfig.routing.source === 'local' ? '本地配置' : '后端接口'}
+                后端接口
               </Typography.Title>
             </Card>
           </Col>

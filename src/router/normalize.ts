@@ -3,7 +3,9 @@ import { getPathParameters, isConcretePath } from './tree';
 import type { AppRoute, RouteIcon } from './types';
 import { routeIconKeys } from './types';
 
+/** 图标白名单：后端返回未知图标时忽略，而不是把字符串直接渲染。 */
 const icons = new Set<string>(routeIconKeys);
+/** 允许从接口透传的布尔开关。 */
 const flags = [
   'affix',
   'hideInMenu',
@@ -13,7 +15,9 @@ const flags = [
 ] as const;
 
 interface NormalizeOptions {
+  /** 已被框架占用的路径，接口不能重复注册。 */
   reservedPaths: Set<string>;
+  /** 页面组件 key 是否已在前端注册表中登记。 */
   isComponent: (key: string) => boolean;
 }
 
@@ -23,10 +27,13 @@ export function normalizeRoutes(
   { reservedPaths, isComponent }: NormalizeOptions,
 ): AppRoute[] {
   if (!Array.isArray(input)) throw new Error('路由接口必须返回数组');
+  /** 路径签名：参数名不同但结构相同的路径也视为冲突。 */
   const signature = (path: string) =>
     path.toLowerCase().replace(/:[^/]+/g, ':param');
+  /** 已占用路径集合，静态路由和接口路由共用。 */
   const paths = new Set([...reservedPaths].map(signature));
 
+  /** 递归校验并复制节点，任何非法数据直接拒绝整个响应。 */
   const walk = (
     nodes: unknown[],
     parent = '',
@@ -76,6 +83,7 @@ export function normalizeRoutes(
         }
         paths.add(signature(path));
 
+        // 只复制白名单字段，避免把接口返回的任意属性带进运行时
         const route: AppRoute = {
           name: node.name.trim(),
           path,
@@ -88,6 +96,7 @@ export function normalizeRoutes(
           throw new Error(`路由 ${path} 的 children 必须是数组`);
         }
         if (Array.isArray(node.children) && node.children.length) {
+          // 分组只负责导航层级，不能同时渲染页面组件
           if (node.component)
             throw new Error(`路由 ${path} 不能同时是分组和页面`);
           route.children = walk(
@@ -124,6 +133,7 @@ export function normalizeRoutes(
         flags.forEach((flag) => {
           if (typeof node[flag] === 'boolean') route[flag] = node[flag];
         });
+        // 固定页签必须是无参数、布局内可见、可关闭性受控的真实页面
         if (
           route.affix &&
           (!route.component ||

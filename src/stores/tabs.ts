@@ -6,6 +6,7 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 interface TabsState {
   /** 页签记录完整地址，切换后保留查询参数和锚点。 */
   tabs: string[];
+  /** 固定页签：不可关闭，且始终保留在最前面。 */
   pinned: string[];
   setPinned: (paths: string[]) => void;
   open: (path: string) => void;
@@ -17,10 +18,12 @@ interface TabsState {
   reset: () => void;
 }
 
+/** 合并固定页签并去重，保证固定页签不会因为关闭操作丢失。 */
 function keepPinned(tabs: string[], pinned: string[]) {
   return [...new Set([...pinned, ...tabs])];
 }
 
+/** 多页签状态：刷新恢复已打开页签，关闭浏览器标签页后清空。 */
 export const useTabsStore = create<TabsState>()(
   persist(
     (set, get) => ({
@@ -71,7 +74,9 @@ export const useTabsStore = create<TabsState>()(
     {
       name: appConfig.storagePrefix + ':tabs',
       storage: createJSONStorage(() => session),
+      /** 只持久化导航记录，固定页签由布局根据路由实时计算。 */
       partialize: (state) => ({ tabs: state.tabs }),
+      /** 恢复时过滤非法地址，并限制最大页签数量。 */
       merge: (persisted, current) => {
         const value = (persisted as { tabs?: unknown } | undefined)?.tabs;
         const tabs = Array.isArray(value)

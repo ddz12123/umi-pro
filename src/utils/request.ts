@@ -14,6 +14,7 @@ export type HttpOptions = Omit<RequestOptions, 'url' | 'getResponse'> & {
   getResponse?: never;
 };
 
+/** 统一请求入口：自动解包业务信封，raw 模式保留原始响应。 */
 export async function http<T = unknown>(
   url: string,
   options: HttpOptions = {},
@@ -27,6 +28,7 @@ export async function http<T = unknown>(
     : unwrapResponse<T>(result);
 }
 
+/** GET：参数放 query。 */
 export function get<T = unknown>(
   url: string,
   params?: object,
@@ -35,6 +37,7 @@ export function get<T = unknown>(
   return http<T>(url, { ...options, method: 'GET', params });
 }
 
+/** POST：数据放 body。 */
 export function post<T = unknown>(
   url: string,
   data?: unknown,
@@ -43,6 +46,7 @@ export function post<T = unknown>(
   return http<T>(url, { ...options, method: 'POST', data });
 }
 
+/** PUT：全量更新。 */
 export function put<T = unknown>(
   url: string,
   data?: unknown,
@@ -51,6 +55,7 @@ export function put<T = unknown>(
   return http<T>(url, { ...options, method: 'PUT', data });
 }
 
+/** PATCH：局部更新。 */
 export function patch<T = unknown>(
   url: string,
   data?: unknown,
@@ -59,6 +64,7 @@ export function patch<T = unknown>(
   return http<T>(url, { ...options, method: 'PATCH', data });
 }
 
+/** DELETE：参数放 query。 */
 export function del<T = unknown>(
   url: string,
   params?: object,

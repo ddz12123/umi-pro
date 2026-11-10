@@ -1,5 +1,4 @@
 import Logo from '@/components/Logo';
-import { appConfig } from '@/config/app';
 import { SYSTEM_NAME } from '@/constants/app';
 import { DEFAULT_ROUTE_PATH, getAffixPaths, matchRoute } from '@/router';
 import { login } from '@/services/auth';
@@ -13,7 +12,7 @@ import {
   LockOutlined,
   UserOutlined,
 } from '@ant-design/icons';
-import { Navigate, history, useModel, useSearchParams } from '@umijs/max';
+import { Navigate, useModel, useSearchParams } from '@umijs/max';
 import { App, Button, Form, Input } from 'antd';
 import React, { useEffect, useRef, useState } from 'react';
 import styles from './index.less';
@@ -144,9 +143,19 @@ const LoginPage: React.FC = () => {
     let loginToken: string | undefined;
     setLoading(true);
     try {
-      const { token, expiresIn, user } = await login(values);
+      const { token, expiresIn, user, roles, permissions } = await login(
+        values,
+      );
       if (getToken() !== requestSession) return;
-      setAuth(token, expiresIn, user);
+      const roleList = roles ?? user?.roles ?? [];
+      const permissionSet = permissions ??
+        user?.permissions ?? { menus: [], buttons: [] };
+      // 角色、菜单权限、按钮权限一并写入登录态，刷新后由 initialState 恢复
+      setAuth(token, expiresIn, {
+        ...user,
+        roles: roleList,
+        permissions: permissionSet,
+      });
       loginToken = token;
       useTabsStore.getState().reset();
       useRouteStore.getState().reset();
@@ -157,20 +166,22 @@ const LoginPage: React.FC = () => {
           ? {
               name: user?.nickName || user?.name || '',
               avatar: user?.avatar,
+              roles: roleList,
+              menuPermissions: permissionSet.menus,
+              buttonPermissions: permissionSet.buttons,
             }
           : previous,
       );
       if (getToken() !== token) return;
 
+      // 回跳地址必须是当前账号有权限访问的路由，否则进入第一个可访问页面
       const fallbackPath = getAffixPaths(routes)[0] ?? DEFAULT_ROUTE_PATH;
       const targetMatch = redirect ? matchRoute(redirect, routes) : undefined;
       const target = targetMatch ? redirect! : fallbackPath;
       message.success('登录成功');
-      if (appConfig.routing.source === 'remote') {
-        window.location.replace(target);
-      } else {
-        history.replace(target);
-      }
+
+      // 接口路由在 Umi 渲染前注入，登录后整页刷新才能拿到新账号的菜单
+      window.location.replace(target);
     } catch (error) {
       if (
         error instanceof RouteLoadCancelledError ||
@@ -507,7 +518,9 @@ const LoginPage: React.FC = () => {
           </Form>
 
           {APP_MOCK_ENABLED ? (
-            <p className={styles.demoHint}>演示账号：admin / 123456</p>
+            <p className={styles.demoHint}>
+              演示账号：admin / operator / viewer，密码均为 123456
+            </p>
           ) : null}
         </div>
       </div>

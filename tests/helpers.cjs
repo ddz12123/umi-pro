@@ -31,14 +31,39 @@ function createHarness(options = {}) {
   const mocks = {
     '@/components/PageLoading': { __esModule: true, default: 'PageLoading' },
     react: {
+      __esModule: true,
+      default: {
+        Component: class {},
+        createElement: (type, props) => ({ type, props }),
+      },
       lazy: (loader) => ({ loader }),
       createElement: (type, props) => ({ type, props }),
+      Suspense: 'Suspense',
     },
     '@umijs/max': {
       defineConfig: (config) => config,
       Navigate: 'Navigate',
       history: { replace: (url) => navigations.push(url) },
       request: options.request ?? (async () => ({ code: 0, data: null })),
+      matchRoutes(records, { pathname }) {
+        const segments = pathname.split('/').filter(Boolean);
+        for (const record of records) {
+          const pattern = record.path.split('/').filter(Boolean);
+          if (pattern.length !== segments.length) continue;
+          let matched = true;
+          for (let index = 0; index < pattern.length; index += 1) {
+            if (!pattern[index].startsWith(':') && pattern[index] !== segments[index]) {
+              matched = false;
+              break;
+            }
+          }
+          if (matched) return [{ route: { path: record.path } }];
+        }
+        return undefined;
+      },
+      generatePath: (pattern) => pattern,
+      useLocation: () => window.location,
+      useParams: () => ({}),
     },
     '@/services/routes': {
       fetchUserRoutes: options.fetchRoutes ?? (async () => []),
@@ -62,6 +87,8 @@ function createHarness(options = {}) {
       .map((ext) => filename + ext)
       .find((name) => fs.existsSync(name) && fs.statSync(name).isFile());
     if (!filename) throw new Error(`Test module not found: ${specifier}`);
+    // Less 模块在测试里只需要保证导入成功，样式值不会被断言。
+    if (filename.endsWith('.less')) return {};
     if (cache.has(filename)) return cache.get(filename).exports;
     const module = { exports: {} };
     cache.set(filename, module);
@@ -96,8 +123,6 @@ function createHarness(options = {}) {
     return module.exports;
   }
 
-  if (options.source)
-    load('@/config/app').appConfig.routing.source = options.source;
   return { load, window, navigations };
 }
 

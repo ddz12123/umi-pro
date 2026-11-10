@@ -2,7 +2,7 @@ const assert = require('node:assert/strict');
 const { test } = require('node:test');
 const { createHarness } = require('./helpers.cjs');
 
-test('默认路由包含现有示例，启动不依赖菜单接口，页面统一受登录守卫保护', async () => {
+test('静态路由只有首页和异常页，业务路由来自接口', async () => {
   let calls = 0;
   const { load } = createHarness({
     fetchRoutes: async () => {
@@ -10,21 +10,21 @@ test('默认路由包含现有示例，启动不依赖菜单接口，页面统�
       return [];
     },
   });
+  load('@/utils/auth').setAuth('session');
   const { useRouteStore } = load('@/stores/routes');
   const routes = await useRouteStore.getState().loadRoutes();
-  assert(routes.some((route) => route.path === '/example'));
-  assert.equal(calls, 0);
+  assert(routes.some((route) => route.path === '/home'));
+  assert(routes.some((route) => route.path === '/exception/404'));
+  assert(routes.some((route) => route.path === '/exception/500'));
+  assert(!routes.some((route) => route.path === '/example'));
+  assert.equal(calls, 1);
   const { umiRoutes } = load('@/router/static-routes');
-  for (const path of [
-    '/home',
-    '/example',
-    '/exception/404',
-    '/exception/500',
-  ]) {
+  for (const path of ['/home', '/exception/404', '/exception/500']) {
     assert.deepEqual(umiRoutes.find((route) => route.path === path).wrappers, [
       '@/wrappers/auth',
     ]);
   }
+  assert.equal(umiRoutes.find((route) => route.path === '/example'), undefined);
 });
 
 test('生产构建关闭 Mock，构建产物支持独立目录', () => {
@@ -43,7 +43,7 @@ test('生产构建关闭 Mock，构建产物支持独立目录', () => {
 
 test('后端嵌套路由归一化、排序，并同步用于面包屑与页签匹配', () => {
   const { load } = createHarness();
-  const { normalizeRoutes } = load('@/stores/routes');
+  const { normalizeRoutes } = load('@/router/catalog');
   const routes = normalizeRoutes([
     {
       name: '示例',
@@ -65,7 +65,7 @@ test('后端嵌套路由归一化、排序，并同步用于面包屑与页签�
 
 test('接口路由拒绝未知组件、重复路径、保留路径和不合法的数据', () => {
   const { load } = createHarness();
-  const { normalizeRoutes } = load('@/stores/routes');
+  const { normalizeRoutes } = load('@/router/catalog');
   const valid = { name: '列表', path: '/list', component: 'Example' };
   for (const input of [
     null,
@@ -89,13 +89,13 @@ test('接口路由拒绝未知组件、重复路径、保留路径和不合法�
 test('路由接口失败后保留错误并允许重试，不回退为本地示例', async () => {
   let calls = 0;
   const { load } = createHarness({
-    source: 'remote',
     fetchRoutes: async () => {
       calls += 1;
       if (calls === 1) throw new Error('菜单加载失败');
       return [{ name: '列表', path: '/list', component: 'Example' }];
     },
   });
+  load('@/utils/auth').setAuth('session');
   const store = load('@/stores/routes').useRouteStore;
   await assert.rejects(store.getState().loadRoutes(), /菜单加载失败/);
   assert.equal(store.getState().ready, false);
@@ -116,12 +116,12 @@ test('并发路由加载只请求一次，退出后的旧响应不能恢复上�
     resolve = done;
   });
   const { load } = createHarness({
-    source: 'remote',
     fetchRoutes: () => {
       calls += 1;
       return pending;
     },
   });
+  load('@/utils/auth').setAuth('session');
   const store = load('@/stores/routes').useRouteStore;
   const first = store.getState().loadRoutes();
   assert.equal(first, store.getState().loadRoutes());
@@ -136,7 +136,6 @@ test('并发路由加载只请求一次，退出后的旧响应不能恢复上�
 
 test('动态路由区分全屏页面，多次 patch 不重复注入', async () => {
   const { load } = createHarness({
-    source: 'remote',
     fetchRoutes: async () => [
       {
         name: '分组',

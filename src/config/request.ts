@@ -29,9 +29,11 @@ export function isTrustedApi(
 }
 
 export const request: RequestConfig = {
+  // 所有请求统一走配置的 API 来源
   baseURL: apiConfig.baseURL,
   timeout: apiConfig.timeout,
   requestInterceptors: [
+    // 只给可信 API 追加 token；外部地址或显式 skipAuth 的请求保持原样
     (config: RequestOptions) => {
       if (config.skipAuth || !isTrustedApi(config.url || '', config.baseURL))
         return config;
@@ -45,12 +47,14 @@ export const request: RequestConfig = {
           ...headers,
           [appConfig.auth.header]: `${appConfig.auth.prefix}${token}`,
         };
+        // 记录本次请求使用的 token，用于识别“旧请求返回时已经换号”
         config.sessionToken = token;
       }
       return config;
     },
   ],
   responseInterceptors: [
+    // 业务信封统一校验；raw 模式（文件下载等）保持原始响应
     (response) => {
       try {
         if ((response.config as RequestOptions).responseMode !== 'raw')
@@ -65,6 +69,7 @@ export const request: RequestConfig = {
   errorConfig: {
     errorHandler: (error, options) => {
       const value = error as AxiosError;
+      // 主动取消的请求不提示用户
       if (value.code === 'ERR_CANCELED' || error.name === 'AbortError') return;
       const unauthorized =
         value.response?.status === 401 ||
@@ -76,6 +81,8 @@ export const request: RequestConfig = {
         error instanceof BizError ? error.requestConfig : value.config
       ) as RequestOptions | undefined;
       const currentToken = getToken();
+
+      // 旧 token 发出的请求现在才返回 401，不能误删新登录态
       if (
         unauthorized &&
         config?.sessionToken &&
@@ -83,6 +90,8 @@ export const request: RequestConfig = {
         config.sessionToken !== currentToken
       )
         return;
+
+      // 当前会话确实失效时才统一退出
       if (
         unauthorized &&
         !options.skipAuth &&
@@ -91,6 +100,7 @@ export const request: RequestConfig = {
         isTrustedApi(config?.url || '', config?.baseURL)
       )
         endSession();
+
       if (options.skipErrorHandler) return;
       showError({
         key: unauthorized ? 'session-expired' : undefined,

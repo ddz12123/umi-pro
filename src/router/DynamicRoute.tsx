@@ -1,7 +1,6 @@
 import ErrorBoundary from '@/components/ErrorBoundary';
 import ExceptionPage from '@/components/ExceptionPage';
 import PageLoading from '@/components/PageLoading';
-import { appConfig } from '@/config/app';
 import { useRouteStore } from '@/stores/routes';
 import { getLoginUrl, getToken } from '@/utils/auth';
 import { Navigate, generatePath, useLocation, useParams } from '@umijs/max';
@@ -12,6 +11,7 @@ import { PAGE_LOADERS, isPageComponentKey } from './page-registry';
 import { NOT_FOUND_PATH } from './paths';
 import { findGroupRoute, getGroupLandingPath, matchRoute } from './routes';
 
+/** 缓存 lazy 组件，避免路由切换时重复创建导致页面重新挂载。 */
 const components = new Map<
   PageComponentKey,
   LazyExoticComponent<ComponentType>
@@ -27,10 +27,11 @@ function getPageComponent(key?: string) {
   return component;
 }
 
-/** 本地与后端页面统一通过已验证的路由元数据渲染，不根据 URL 拼接组件路径。 */
+/** 所有页面统一通过已验证的路由元数据渲染，不根据 URL 拼接组件路径。 */
 export default function DynamicRoute() {
   const location = useLocation();
   const params = useParams();
+  // 当前账号的路由树；ready/sessionToken 用于避免显示上一个账号或未加载完的页面
   const routes = useRouteStore((state) => state.routes);
   const ready = useRouteStore((state) => state.ready);
   const routeToken = useRouteStore((state) => state.sessionToken);
@@ -52,9 +53,10 @@ export default function DynamicRoute() {
         description={error}
       />
     );
-  if (appConfig.routing.source === 'remote' && (!ready || routeToken !== token))
-    return <PageLoading />;
+  // 接口路由尚未加载完成，或加载结果不属于当前登录会话时先展示 loading
+  if (!ready || routeToken !== token) return <PageLoading />;
 
+  // 分组地址没有自己的页面，自动跳到默认子页面并保留 query/hash
   const group = findGroupRoute(location.pathname, routes);
   if (group) {
     const landing = getGroupLandingPath(group);

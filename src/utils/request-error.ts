@@ -1,6 +1,7 @@
 import type { AxiosError } from '@umijs/max';
 import { BizError } from './response';
 
+/** HTTP 状态码 -> 用户可读提示。 */
 const statusMessages: Record<number, string> = {
   400: '请求参数错误',
   401: '登录已过期，请重新登录',
@@ -12,6 +13,7 @@ const statusMessages: Record<number, string> = {
   504: '网关超时',
 };
 
+/** 把业务异常、HTTP 状态码、超时和网络错误统一成一句中文提示。 */
 export function getRequestErrorMessage(error: unknown): string {
   if (error instanceof BizError) return error.message;
   const value = error as AxiosError | undefined;

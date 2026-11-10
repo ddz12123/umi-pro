@@ -1,5 +1,6 @@
 import type { ThemeConfig } from 'antd';
 
+/** 中英文混排字体栈：优先系统 UI 字体，避免首屏额外加载字体文件。 */
 const FONT_FAMILY =
   "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Arial, sans-serif";
 

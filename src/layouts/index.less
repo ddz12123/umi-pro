@@ -316,40 +316,37 @@
   color: #cbd5e1;
 }
 
-.search {
+.searchTrigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   width: 238px;
+  height: 34px;
+  padding: 0 10px;
+  cursor: pointer;
+  background: #f6f8fb;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  transition: background-color 0.18s ease, border-color 0.18s ease,
+    box-shadow 0.18s ease;
 
-  :global {
-    .ant-input-affix-wrapper {
-      height: 34px;
-      padding: 0 10px;
-      background: #f6f8fb;
-      border-color: transparent;
-      border-radius: 8px;
-      box-shadow: none;
-      transition: background-color 0.18s ease, border-color 0.18s ease,
-        box-shadow 0.18s ease;
-
-      &:hover {
-        background: #f1f5fa;
-      }
-
-      &.ant-input-affix-wrapper-focused {
-        background: #fff;
-        border-color: #bfd3fb;
-        box-shadow: 0 0 0 3px rgb(37 99 235 / 8%);
-      }
-    }
-
-    .ant-input {
-      font-size: 13px;
-      background: transparent;
-    }
-
-    .ant-input-suffix {
-      margin-left: 6px;
-    }
+  &:hover {
+    background: #f1f5fa;
   }
+
+  &:focus-visible {
+    background: #fff;
+    border-color: #bfd3fb;
+    box-shadow: 0 0 0 3px rgb(37 99 235 / 8%);
+    outline: none;
+  }
+}
+
+.searchPlaceholder {
+  flex: 1;
+  font-size: 13px;
+  color: #94a3b8;
+  text-align: left;
 }
 
 .searchIcon {
@@ -371,21 +368,140 @@
   border-radius: 4px;
 }
 
-.searchOption {
+/* ==================== 搜索弹框 ==================== */
+
+.searchModal {
+  :global {
+    .ant-modal-content {
+      padding: 0;
+      overflow: hidden;
+      border-radius: 14px;
+      box-shadow: 0 16px 48px rgb(15 23 42 / 18%), 0 4px 16px rgb(15 23 42 / 8%);
+    }
+  }
+}
+
+.searchInputWrap {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 18px;
+  gap: 12px;
+  height: 56px;
+  padding: 0 18px;
+  border-bottom: 1px solid #edf0f5;
+
+  :global {
+    .ant-input-affix-wrapper {
+      padding: 0;
+      background: transparent;
+
+      /* 整行即搜索区，去掉 antd v6 borderless 的 focus-visible 描边 */
+      &:focus-visible,
+      &:has(input:focus-visible) {
+        outline: none;
+      }
+    }
+
+    .ant-input {
+      font-size: 14px;
+      background: transparent;
+
+      &::placeholder {
+        color: #a8b3c4;
+      }
+    }
+  }
 }
 
-.searchOptionTitle {
+.searchModalIcon {
+  font-size: 17px;
+  color: #64748b;
+}
+
+.searchList {
+  max-height: 360px;
+  padding: 6px;
+  overflow-y: auto;
+}
+
+.searchItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 12px;
+  text-align: left;
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+  border-radius: 9px;
+  transition: background-color 0.15s ease;
+
+  & + & {
+    margin-top: 2px;
+  }
+}
+
+.searchItemTitle {
+  overflow: hidden;
   font-size: 13px;
   color: #1f2937;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
-.searchOptionTrail {
+.searchItemTrail {
+  margin-left: auto;
+  overflow: hidden;
   font-size: 11px;
   color: #94a3b8;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.searchItemEnter {
+  flex-shrink: 0;
+  font-size: 12px;
+  color: #2563eb;
+  opacity: 0;
+}
+
+.searchItemActive {
+  background: #eef4ff;
+
+  .searchItemTitle {
+    font-weight: 500;
+    color: #1d4ed8;
+  }
+
+  .searchItemEnter {
+    opacity: 1;
+  }
+}
+
+.searchEmpty {
+  padding: 24px 0;
+}
+
+.searchFooter {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 9px 16px;
+  font-size: 11px;
+  color: #8a94a6;
+  background: #f8fafc;
+  border-top: 1px solid #edf0f5;
+
+  span {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+}
+
+.searchCount {
+  margin-left: auto;
+  color: #a8b3c4;
 }
 
 .headerDivider {
@@ -655,18 +771,18 @@
 /* ==================== 响应式 ==================== */
 
 @media (max-width: 1200px) {
-  .search {
+  .searchTrigger {
     width: 200px;
   }
 }
 
 @media (max-width: 992px) {
-  .search {
+  .searchTrigger {
     width: 176px;
-  }
 
-  .kbd {
-    display: none;
+    .kbd {
+      display: none;
+    }
   }
 }
 
@@ -679,7 +795,20 @@
     display: none;
   }
 
-  .search,
+  .searchTrigger {
+    justify-content: center;
+    width: 34px;
+    padding: 0;
+  }
+
+  .searchPlaceholder {
+    display: none;
+  }
+
+  .searchFooter {
+    display: none;
+  }
+
   .headerDivider {
     display: none;
   }
