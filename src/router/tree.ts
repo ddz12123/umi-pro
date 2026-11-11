@@ -56,3 +56,18 @@ export function filterRoutesByAccess(
     return children.length ? [{ ...route, children }] : [];
   });
 }
+
+/** 按 order 递归稳定排序：未设置的保持声明顺序，并排在已设置节点之后。 */
+export function sortRoutesByOrder(routes: AppRoute[]): AppRoute[] {
+  return [...routes]
+    .sort((a, b) => {
+      if (a.order === undefined) return b.order === undefined ? 0 : 1;
+      if (b.order === undefined) return -1;
+      return a.order - b.order;
+    })
+    .map((route) =>
+      route.children?.length
+        ? { ...route, children: sortRoutesByOrder(route.children) }
+        : route,
+    );
+}

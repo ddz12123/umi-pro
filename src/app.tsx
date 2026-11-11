@@ -6,7 +6,7 @@ import { SYSTEM_NAME } from '@/constants/app';
 import { getRouteTitle, matchRoute, staticRoutes } from '@/router';
 import { isLoginPath } from '@/router/paths';
 import { applyThemeCssVars, useThemeStore } from '@/stores/theme';
-import { getAuthUser } from '@/utils/auth';
+import { clearAuth, getAuthUser, isLogin } from '@/utils/auth';
 import { startProgress } from '@/utils/progress';
 import { App, ConfigProvider } from 'antd';
 import zhCN from 'antd/locale/zh_CN';
@@ -17,6 +17,8 @@ export { request } from '@/config/request';
 /** Umi 初始状态：恢复用户信息、角色以及菜单/按钮两类权限。 */
 export function getInitialState() {
   const user = getAuthUser();
+  // token 在但用户缓存损坏/丢失时清空登录态，避免陷入空权限死状态
+  if (!user && isLogin()) clearAuth();
   return {
     name: user?.nickName || user?.name || '',
     avatar: user?.avatar,
@@ -75,12 +77,11 @@ export function onRouteChange({
 }) {
   const { pathname } = location;
   startProgress();
-  const title = isLoginPath(pathname)
-    ? '登录'
-    : matchRoute(pathname, staticRoutes)
-    ? undefined
-    : '页面不存在';
-  document.title = title
-    ? title + ' · ' + SYSTEM_NAME
-    : getRouteTitle(pathname, staticRoutes);
+  if (isLoginPath(pathname)) {
+    document.title = `登录 · ${SYSTEM_NAME}`;
+    return;
+  }
+  document.title = matchRoute(pathname, staticRoutes)
+    ? getRouteTitle(pathname, staticRoutes)
+    : `页面不存在 · ${SYSTEM_NAME}`;
 }

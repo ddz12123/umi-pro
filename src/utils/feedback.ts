@@ -1,3 +1,6 @@
+import { appConfig } from '@/config/app';
+import { session } from './storage';
+
 interface ErrorFeedback {
   content: string;
   key?: string;
@@ -25,4 +28,17 @@ export function bindErrorFeedback(next: Listener) {
   return () => {
     if (listener === next) listener = undefined;
   };
+}
+
+const NOTICE_KEY = `${appConfig.storagePrefix}:flash-notice`;
+
+/** 整页跳转前写入一次性成功提示，跳转后由 GlobalFeedback 展示并清除。 */
+export function setFlashNotice(content: string) {
+  session.setItem(NOTICE_KEY, content);
+}
+
+export function takeFlashNotice(): string | undefined {
+  const value = session.getItem(NOTICE_KEY);
+  if (value) session.removeItem(NOTICE_KEY);
+  return value ?? undefined;
 }

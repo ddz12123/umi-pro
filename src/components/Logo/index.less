@@ -1,9 +1,64 @@
 .logo {
+  position: relative;
   display: inline-flex;
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(140deg, #3b82f6 0%, #1d4ed8 100%);
-  box-shadow: 0 6px 16px rgb(37 99 235 / 32%),
-    inset 0 1px 0 rgb(255 255 255 / 28%);
+  background: radial-gradient(
+      120% 90% at 18% 0%,
+      rgb(255 255 255 / 24%) 0%,
+      transparent 48%
+    ),
+    linear-gradient(140deg, var(--app-primary) 0%, var(--app-primary-deep) 100%);
+  box-shadow: 0 6px 16px var(--app-primary-glow),
+    inset 0 1px 0 rgb(255 255 255 / 30%), inset 0 -2px 6px rgb(0 0 0 / 16%);
+  transition: transform 0.18s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.18s ease;
+
+  &:hover {
+    transform: translateY(-1px) scale(1.04);
+    box-shadow: 0 9px 22px var(--app-primary-glow),
+      inset 0 1px 0 rgb(255 255 255 / 34%), inset 0 -2px 6px rgb(0 0 0 / 16%);
+
+    .pearl {
+      animation: pearl-bob 1.5s ease-in-out infinite;
+    }
+
+    .wave {
+      opacity: 0.95;
+    }
+  }
+}
+
+.wave {
+  opacity: 0.68;
+  transition: opacity 0.18s ease;
+}
+
+.pearl {
+  transform-origin: 24px 13px;
+}
+
+@keyframes pearl-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-1.8px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .logo {
+    transition: none;
+
+    &:hover {
+      transform: none;
+
+      .pearl {
+        animation: none;
+      }
+    }
+  }
 }

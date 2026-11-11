@@ -1,4 +1,7 @@
+import accessFactory from '@/access';
 import { DEFAULT_ROUTE_PATH, getAffixPaths, staticRoutes } from '@/router';
+import { filterRoutesByAccess } from '@/router/tree';
+import { getAuthUser } from '@/utils/auth';
 import { doneProgress } from '@/utils/progress';
 import { Button } from 'antd';
 import React from 'react';
@@ -55,10 +58,15 @@ const ExceptionPage: React.FC<ExceptionPageProps> = ({
   }, [status]);
 
   const goHome = () => {
-    // 异常页是全屏页面，根级 ErrorBoundary 下路由可能已卸载，用整页跳转更可靠
-    window.location.assign(
-      getAffixPaths(staticRoutes)[0] ?? DEFAULT_ROUTE_PATH,
-    );
+    // 根级 ErrorBoundary 下可能没有 initialState，直接读缓存权限过滤落点
+    const user = getAuthUser();
+    const access = accessFactory({
+      menuPermissions: user?.permissions?.menus,
+      buttonPermissions: user?.permissions?.buttons,
+    });
+    const routes = filterRoutesByAccess(staticRoutes, access.normalRouteFilter);
+    // 异常页是全屏页面，路由可能已卸载，用整页跳转更可靠
+    window.location.assign(getAffixPaths(routes)[0] ?? DEFAULT_ROUTE_PATH);
   };
   const goBack = () => {
     if (window.history.length > 1) {

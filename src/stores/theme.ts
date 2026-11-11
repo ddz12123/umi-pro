@@ -7,6 +7,10 @@ export type TabsStyle = 'soft' | 'line' | 'card' | 'pill';
 export const DEFAULT_PRIMARY_COLOR = '#2563eb';
 export const DEFAULT_TABS_STYLE: TabsStyle = 'soft';
 
+/** 导航布局：侧边栏 / 顶部 */
+export type AppLayout = 'side' | 'top';
+export const DEFAULT_LAYOUT: AppLayout = 'side';
+
 /** 预设主题色 */
 export const THEME_PRESETS: { label: string; value: string }[] = [
   { label: '宝石蓝', value: '#2563eb' },
@@ -23,6 +27,7 @@ const HEX_COLOR = /^#[0-9a-f]{6}$/i;
 interface StoredTheme {
   primaryColor?: string;
   tabsStyle?: string;
+  layout?: string;
 }
 
 function normalizeTabsStyle(value?: string): TabsStyle {
@@ -31,13 +36,22 @@ function normalizeTabsStyle(value?: string): TabsStyle {
     : 'soft';
 }
 
-function readTheme(): { primaryColor: string; tabsStyle: TabsStyle } {
+function normalizeLayout(value?: string): AppLayout {
+  return value === 'top' ? 'top' : 'side';
+}
+
+function readTheme(): {
+  primaryColor: string;
+  tabsStyle: TabsStyle;
+  layout: AppLayout;
+} {
   try {
     const raw = local.getItem(STORAGE_KEY);
     if (!raw) {
       return {
         primaryColor: DEFAULT_PRIMARY_COLOR,
         tabsStyle: DEFAULT_TABS_STYLE,
+        layout: DEFAULT_LAYOUT,
       };
     }
     const parsed = JSON.parse(raw) as StoredTheme;
@@ -46,17 +60,26 @@ function readTheme(): { primaryColor: string; tabsStyle: TabsStyle } {
         ? (parsed.primaryColor as string)
         : DEFAULT_PRIMARY_COLOR,
       tabsStyle: normalizeTabsStyle(parsed.tabsStyle),
+      layout: normalizeLayout(parsed.layout),
     };
   } catch {
     return {
       primaryColor: DEFAULT_PRIMARY_COLOR,
       tabsStyle: DEFAULT_TABS_STYLE,
+      layout: DEFAULT_LAYOUT,
     };
   }
 }
 
-function persist(primaryColor: string, tabsStyle: TabsStyle) {
-  local.setItem(STORAGE_KEY, JSON.stringify({ primaryColor, tabsStyle }));
+function persist(
+  primaryColor: string,
+  tabsStyle: TabsStyle,
+  layout: AppLayout,
+) {
+  local.setItem(
+    STORAGE_KEY,
+    JSON.stringify({ primaryColor, tabsStyle, layout }),
+  );
 }
 
 function toRgb(hex: string) {
@@ -78,12 +101,21 @@ function mixWhite(hex: string, amount: number) {
   return `rgb(${mix(r)}, ${mix(g)}, ${mix(b)})`;
 }
 
+/** 向侧边栏深色混合，得到品牌渐变的暗端。 */
+function mixDark(hex: string, amount: number) {
+  const { r, g, b } = toRgb(hex);
+  const mix = (value: number, target: number) =>
+    Math.round(value + (target - value) * amount);
+  return `rgb(${mix(r, 10)}, ${mix(g, 20)}, ${mix(b, 35)})`;
+}
+
 /** 把主题色同步到 CSS 变量，供自定义样式使用。 */
 export function applyThemeCssVars(primaryColor: string) {
   if (typeof document === 'undefined') return;
   const style = document.documentElement.style;
   style.setProperty('--app-primary', primaryColor);
   style.setProperty('--app-primary-light', mixWhite(primaryColor, 0.55));
+  style.setProperty('--app-primary-deep', mixDark(primaryColor, 0.42));
   style.setProperty('--app-primary-soft', rgba(primaryColor, 0.1));
   style.setProperty('--app-primary-13', rgba(primaryColor, 0.13));
   style.setProperty('--app-primary-18', rgba(primaryColor, 0.18));
@@ -96,8 +128,10 @@ export function applyThemeCssVars(primaryColor: string) {
 interface ThemeState {
   primaryColor: string;
   tabsStyle: TabsStyle;
+  layout: AppLayout;
   setPrimaryColor: (color: string) => void;
   setTabsStyle: (style: TabsStyle) => void;
+  setLayout: (layout: AppLayout) => void;
   reset: () => void;
 }
 
@@ -107,19 +141,25 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
   setPrimaryColor: (primaryColor) => {
     if (!HEX_COLOR.test(primaryColor)) return;
     set({ primaryColor });
-    persist(primaryColor, get().tabsStyle);
+    persist(primaryColor, get().tabsStyle, get().layout);
   },
 
   setTabsStyle: (tabsStyle) => {
     set({ tabsStyle });
-    persist(get().primaryColor, tabsStyle);
+    persist(get().primaryColor, tabsStyle, get().layout);
+  },
+
+  setLayout: (layout) => {
+    set({ layout });
+    persist(get().primaryColor, get().tabsStyle, layout);
   },
 
   reset: () => {
     set({
       primaryColor: DEFAULT_PRIMARY_COLOR,
       tabsStyle: DEFAULT_TABS_STYLE,
+      layout: DEFAULT_LAYOUT,
     });
-    persist(DEFAULT_PRIMARY_COLOR, DEFAULT_TABS_STYLE);
+    persist(DEFAULT_PRIMARY_COLOR, DEFAULT_TABS_STYLE, DEFAULT_LAYOUT);
   },
 }));

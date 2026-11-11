@@ -2,7 +2,7 @@ import { appConfig } from '@/config/app';
 import { getToken } from '@/utils/auth';
 import { showError } from '@/utils/feedback';
 import { getRequestErrorMessage } from '@/utils/request-error';
-import { BizError, checkResponse } from '@/utils/response';
+import { BizError, checkBlobResponse, checkResponse } from '@/utils/response';
 import { endSession } from '@/utils/session';
 import type { AxiosError, RequestConfig, RequestOptions } from '@umijs/max';
 import { apiConfig } from './api';
@@ -54,11 +54,12 @@ export const request: RequestConfig = {
     },
   ],
   responseInterceptors: [
-    // 业务信封统一校验；raw 模式（文件下载等）保持原始响应
-    (response) => {
+    // 业务信封统一校验；raw 模式不解包，但 JSON Blob 里的业务错误仍要识别
+    async (response) => {
       try {
         if ((response.config as RequestOptions).responseMode !== 'raw')
           checkResponse(response.data);
+        await checkBlobResponse(response.data);
       } catch (error) {
         if (error instanceof BizError) error.requestConfig = response.config;
         throw error;
@@ -91,21 +92,20 @@ export const request: RequestConfig = {
       )
         return;
 
-      // 当前会话确实失效时才统一退出
+      // 当前会话确实失效时才统一退出，过期提示由登录页展示
       if (
         unauthorized &&
         !options.skipAuth &&
         !config?.skipAuth &&
         (!currentToken || config?.sessionToken === currentToken) &&
         isTrustedApi(config?.url || '', config?.baseURL)
-      )
-        endSession();
+      ) {
+        endSession(true, 'expired');
+        return;
+      }
 
       if (options.skipErrorHandler) return;
-      showError({
-        key: unauthorized ? 'session-expired' : undefined,
-        content: getRequestErrorMessage(error),
-      });
+      showError({ content: getRequestErrorMessage(error) });
     },
   },
 };

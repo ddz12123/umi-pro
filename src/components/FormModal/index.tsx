@@ -1,6 +1,7 @@
+import { useFormSubmit } from '@/hooks/useFormSubmit';
 import type { FormInstance } from 'antd';
 import { Form, Modal } from 'antd';
-import React, { useRef, useState } from 'react';
+import React from 'react';
 import styles from './index.less';
 
 type ModalProps = React.ComponentProps<typeof Modal>;
@@ -33,13 +34,14 @@ export type FormModalProps<V> = Omit<
   | 'onCancel'
   | 'confirmLoading'
   | 'afterOpenChange'
+  | 'destroyOnHidden'
 > &
   FormModalOwnProps<V>;
 
 /**
  * 新增/编辑表单弹窗：统一校验、提交中状态、打开回填、成功后关闭与刷新。
+ * 关闭即销毁表单，每次打开重新挂载并按 initialValues 回填，无残留无闪烁。
  * 内容区限高并内部滚动，标题与底部按钮始终可见；短表单保持自然高度。
- * 业务只提供表单项和提交逻辑，不再重复 submitting / validateFields 样板代码。
  */
 function FormModal<V extends object = Record<string, unknown>>({
   open,
@@ -56,51 +58,25 @@ function FormModal<V extends object = Record<string, unknown>>({
 }: FormModalProps<V>) {
   const [innerForm] = Form.useForm<V>();
   const form = externalForm ?? innerForm;
-  const [submitting, setSubmitting] = useState(false);
-  const initialValuesRef = useRef(initialValues);
-  initialValuesRef.current = initialValues;
-
-  /** 每次打开时重置并按最新数据回填，避免残留上一次编辑的值 */
-  const handleAfterOpenChange = (visible: boolean) => {
-    if (!visible) return;
-    form.resetFields();
-    if (initialValuesRef.current) {
-      form.setFieldsValue(initialValuesRef.current as V);
-    }
-  };
-
-  const handleOk = async () => {
-    let values: V;
-    try {
-      values = await form.validateFields();
-    } catch {
-      return;
-    }
-    setSubmitting(true);
-    try {
-      await onSubmit(values);
-      onSuccess?.();
-      onCancel();
-    } catch {
-      // 接口异常已由全局 errorHandler 提示，弹窗保持打开以便重试
-    } finally {
-      setSubmitting(false);
-    }
-  };
+  const { submitting, handleSubmit } = useFormSubmit({
+    form,
+    onSubmit,
+    onSuccess,
+    onClose: onCancel,
+  });
 
   return (
     <Modal
-      destroyOnHidden
       width={520}
       okText="确定"
       cancelText="取消"
       {...modalProps}
+      destroyOnHidden
       open={open}
       title={title}
-      onOk={handleOk}
+      onOk={handleSubmit}
       onCancel={onCancel}
       confirmLoading={submitting}
-      afterOpenChange={handleAfterOpenChange}
     >
       <div
         className={styles.scrollBody}
@@ -112,6 +88,7 @@ function FormModal<V extends object = Record<string, unknown>>({
           form={form}
           layout={formLayout}
           preserve={false}
+          initialValues={initialValues as V}
           scrollToFirstError
         >
           {children}

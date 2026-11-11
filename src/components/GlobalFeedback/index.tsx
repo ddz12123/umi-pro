@@ -1,4 +1,4 @@
-import { bindErrorFeedback } from '@/utils/feedback';
+import { bindErrorFeedback, takeFlashNotice } from '@/utils/feedback';
 import { App } from 'antd';
 import { useEffect } from 'react';
 
@@ -11,5 +11,9 @@ export default function GlobalFeedback() {
       }),
     [message],
   );
+  useEffect(() => {
+    const notice = takeFlashNotice();
+    if (notice) void message.success(notice);
+  }, [message]);
   return null;
 }

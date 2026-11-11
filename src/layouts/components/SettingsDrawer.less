@@ -149,6 +149,44 @@
   border-radius: 999px;
 }
 
+/* 布局示意：侧边 = 左竖栏 + 右内容；顶部 = 上横栏 + 下内容 */
+.previewSide,
+.previewTop {
+  display: grid;
+  gap: 4px;
+  padding: 5px 6px;
+
+  i {
+    width: auto;
+    height: auto;
+  }
+}
+
+.previewSide {
+  grid-template-columns: 20px 1fr;
+  grid-template-rows: 1fr 1fr;
+
+  i:first-child {
+    grid-row: 1 / 3;
+    background: var(--app-primary-18);
+  }
+}
+
+.previewTop {
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 9px 1fr;
+
+  i:first-child {
+    grid-column: 1 / 3;
+    background: var(--app-primary-18);
+  }
+}
+
+.tabStyleActive .previewSide i:first-child,
+.tabStyleActive .previewTop i:first-child {
+  background: var(--app-primary-28);
+}
+
 .tabStyleText {
   display: flex;
   flex-direction: column;

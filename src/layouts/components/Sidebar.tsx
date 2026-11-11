@@ -30,7 +30,7 @@ interface SidebarProps {
   onToggleCollapse?: () => void;
 }
 
-function buildMenuItems(nodes: AppRoute[], depth = 0): AntdMenuItem[] {
+export function buildMenuItems(nodes: AppRoute[], depth = 0): AntdMenuItem[] {
   const items: AntdMenuItem[] = [];
 
   nodes.forEach((node) => {

@@ -2,14 +2,7 @@
 export type LayoutMode = 'fill' | 'page';
 
 /** 图标 key 白名单，统一在 src/layouts/components/menu-icons.tsx 中映射。 */
-export const routeIconKeys = [
-  'dashboard',
-  'table',
-  'system',
-  'user',
-  'role',
-  'menu',
-] as const;
+export const routeIconKeys = ['dashboard', 'table'] as const;
 export type RouteIcon = (typeof routeIconKeys)[number];
 
 export interface AppRoute {
@@ -18,7 +11,7 @@ export interface AppRoute {
   /** 绝对路径 */
   path: string;
   /**
-   * 页面组件路径（相对 src/pages），如 System/User
+   * 页面组件路径（相对 src/pages），如 Example
    */
   component?: string;
   /** 访问权限码；对应 access.ts 中的菜单权限判断 */

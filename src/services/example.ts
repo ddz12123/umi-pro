@@ -1,4 +1,5 @@
 import { del, get, post, put } from '@/utils/request';
+import type { PageQueryParams, PageResult } from './types';
 
 export interface ExampleUser {
   id: string;
@@ -10,19 +11,9 @@ export interface ExampleUser {
   createdAt?: string;
 }
 
-export interface UserQueryParams {
-  current?: number;
-  pageSize?: number;
-  keyword?: string;
+export interface UserQueryParams extends PageQueryParams {
   gender?: string;
   status?: string;
-}
-
-export interface PageResult<T> {
-  list: T[];
-  total: number;
-  current: number;
-  pageSize: number;
 }
 
 export function queryUsers(params: UserQueryParams) {

@@ -1,7 +1,6 @@
 import type { AppRoute } from '@/router';
 import { getSearchEntries } from '@/router';
 import { EnterOutlined, SearchOutlined } from '@ant-design/icons';
-import { history } from '@umijs/max';
 import type { InputRef } from 'antd';
 import { Empty, Input, Modal } from 'antd';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
@@ -9,9 +8,10 @@ import styles from '../index.less';
 
 interface SearchMenuProps {
   routes: AppRoute[];
+  onNavigate: (path: string) => void;
 }
 
-const SearchMenu: React.FC<SearchMenuProps> = ({ routes }) => {
+const SearchMenu: React.FC<SearchMenuProps> = ({ routes, onNavigate }) => {
   const [open, setOpen] = useState(false);
   const [keyword, setKeyword] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
@@ -58,7 +58,7 @@ const SearchMenu: React.FC<SearchMenuProps> = ({ routes }) => {
   }, [activeIndex, filtered]);
 
   const navigate = (path: string) => {
-    history.push(path);
+    onNavigate(path);
     setOpen(false);
   };
 

@@ -9,7 +9,8 @@ import { useEffect } from 'react';
 export default function SessionSync() {
   useEffect(() => {
     const checkExpiry = () => {
-      if (!getToken() && !isLoginPath(window.location.pathname)) endSession();
+      if (!getToken() && !isLoginPath(window.location.pathname))
+        endSession(true, 'expired');
     };
     const handleStorage = (event: StorageEvent) => {
       if (event.key !== AUTH_STORAGE_KEY && event.key !== null) return;

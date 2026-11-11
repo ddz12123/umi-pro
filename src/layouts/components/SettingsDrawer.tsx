@@ -1,9 +1,29 @@
-import type { TabsStyle } from '@/stores/theme';
+import type { AppLayout, TabsStyle } from '@/stores/theme';
 import { THEME_PRESETS, useThemeStore } from '@/stores/theme';
 import { CheckOutlined, ReloadOutlined } from '@ant-design/icons';
 import { Button, Drawer, Tooltip } from 'antd';
 import React from 'react';
 import styles from './SettingsDrawer.less';
+
+const LAYOUT_OPTIONS: {
+  value: AppLayout;
+  label: string;
+  desc: string;
+  preview: string;
+}[] = [
+  {
+    value: 'side',
+    label: '侧边布局',
+    desc: '深色侧边导航 + 顶栏面包屑，经典后台',
+    preview: 'previewSide',
+  },
+  {
+    value: 'top',
+    label: '顶部布局',
+    desc: '导航收敛到顶栏，内容区更开阔',
+    preview: 'previewTop',
+  },
+];
 
 interface SettingsDrawerProps {
   open: boolean;
@@ -45,8 +65,10 @@ const TABS_STYLES: {
 const SettingsDrawer: React.FC<SettingsDrawerProps> = ({ open, onClose }) => {
   const primaryColor = useThemeStore((state) => state.primaryColor);
   const tabsStyle = useThemeStore((state) => state.tabsStyle);
+  const layout = useThemeStore((state) => state.layout);
   const setPrimaryColor = useThemeStore((state) => state.setPrimaryColor);
   const setTabsStyle = useThemeStore((state) => state.setTabsStyle);
+  const setLayout = useThemeStore((state) => state.setLayout);
   const reset = useThemeStore((state) => state.reset);
 
   return (
@@ -76,6 +98,37 @@ const SettingsDrawer: React.FC<SettingsDrawerProps> = ({ open, onClose }) => {
                 {primaryColor === color.value ? <CheckOutlined /> : null}
               </button>
             </Tooltip>
+          ))}
+        </div>
+      </section>
+
+      <section className={styles.section}>
+        <div className={styles.sectionTitle}>布局</div>
+        <p className={styles.sectionDesc}>切换导航结构，偏好本地保存</p>
+        <div className={styles.tabStyles}>
+          {LAYOUT_OPTIONS.map((item) => (
+            <button
+              key={item.value}
+              type="button"
+              className={[
+                styles.tabStyleCard,
+                layout === item.value ? styles.tabStyleActive : '',
+              ].join(' ')}
+              onClick={() => setLayout(item.value)}
+            >
+              <span
+                className={[styles.preview, styles[item.preview]].join(' ')}
+                aria-hidden
+              >
+                <i />
+                <i />
+                <i />
+              </span>
+              <span className={styles.tabStyleText}>
+                <span className={styles.tabStyleLabel}>{item.label}</span>
+                <span className={styles.tabStyleDesc}>{item.desc}</span>
+              </span>
+            </button>
           ))}
         </div>
       </section>

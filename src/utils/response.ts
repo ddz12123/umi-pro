@@ -52,6 +52,18 @@ export function checkResponse(value: unknown): void {
   }
 }
 
+/** 导出等场景后端可能用 JSON Blob 返回业务错误，解析后并入统一校验。 */
+export async function checkBlobResponse(value: unknown): Promise<void> {
+  if (!(value instanceof Blob) || !value.type.includes('json')) return;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(await value.text());
+  } catch {
+    return;
+  }
+  checkResponse(parsed);
+}
+
 /** 普通 JSON、数组、Blob 等保持原样；仅解包已识别的接口信封。 */
 export function unwrapResponse<T>(value: unknown): T {
   return (

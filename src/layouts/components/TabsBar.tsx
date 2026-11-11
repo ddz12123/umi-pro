@@ -132,7 +132,7 @@ const TabsBar: React.FC<TabsBarProps> = ({
           {tab.icon ? (
             <span className={styles.tabIcon}>{getMenuIcon(tab.icon, 0)}</span>
           ) : null}
-          {tab.title}
+          <span className={styles.tabText}>{tab.title}</span>
         </span>
       </Dropdown>
     ),

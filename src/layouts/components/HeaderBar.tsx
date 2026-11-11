@@ -1,5 +1,11 @@
+import Logo from '@/components/Logo';
+import { SYSTEM_NAME } from '@/constants/app';
 import type { AppRoute } from '@/router';
-import { getBreadcrumbChain } from '@/router';
+import {
+  DEFAULT_ROUTE_PATH,
+  getAffixPaths,
+  getBreadcrumbChain,
+} from '@/router';
 import {
   DownOutlined,
   FullscreenExitOutlined,
@@ -9,38 +15,53 @@ import {
   RightOutlined,
   SettingOutlined,
 } from '@ant-design/icons';
-import { history } from '@umijs/max';
 import type { BreadcrumbProps } from 'antd';
-import { Avatar, Breadcrumb, Button, Dropdown, Layout, Tooltip } from 'antd';
+import {
+  Avatar,
+  Breadcrumb,
+  Button,
+  Dropdown,
+  Layout,
+  Menu,
+  Tooltip,
+} from 'antd';
 import React, { useEffect, useMemo, useState } from 'react';
 import styles from '../index.less';
 import { getMenuIcon } from './menu-icons';
 import SearchMenu from './SearchMenu';
+import { buildMenuItems } from './Sidebar';
 
 const { Header } = Layout;
 
 interface HeaderBarProps {
+  layout: 'side' | 'top';
   routes: AppRoute[];
   pathname: string;
+  menuActivePath: string;
   isMobile: boolean;
   userName: string;
   avatar?: string;
   onToggleSider: () => void;
   onOpenSettings: () => void;
   onLogout: () => void;
+  onNavigate: (path: string) => void;
 }
 
 const HeaderBar: React.FC<HeaderBarProps> = ({
+  layout,
   routes,
   pathname,
+  menuActivePath,
   isMobile,
   userName,
   avatar,
   onToggleSider,
   onOpenSettings,
   onLogout,
+  onNavigate,
 }) => {
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const isTop = layout === 'top';
 
   useEffect(() => {
     const handleFullscreen = () =>
@@ -51,6 +72,15 @@ const HeaderBar: React.FC<HeaderBarProps> = ({
       document.removeEventListener('fullscreenchange', handleFullscreen);
     };
   }, []);
+
+  const menuItems = useMemo(() => buildMenuItems(routes), [routes]);
+  const homePath = useMemo(
+    () =>
+      getAffixPaths(routes)[0] ??
+      routes.find((route) => route.component && !route.hideInMenu)?.path ??
+      DEFAULT_ROUTE_PATH,
+    [routes],
+  );
 
   /** 面包屑严格取自路由链，父级可点击返回。 */
   const breadcrumbItems = useMemo<BreadcrumbProps['items']>(() => {
@@ -68,7 +98,7 @@ const HeaderBar: React.FC<HeaderBarProps> = ({
           <button
             type="button"
             className={styles.crumbItem}
-            onClick={() => history.push(route.path)}
+            onClick={() => onNavigate(route.path)}
           >
             {icon ? <span className={styles.crumbIcon}>{icon}</span> : null}
             {route.name}
@@ -76,7 +106,7 @@ const HeaderBar: React.FC<HeaderBarProps> = ({
         ),
       };
     });
-  }, [pathname, routes]);
+  }, [pathname, routes, onNavigate]);
 
   const toggleFullscreen = () => {
     if (document.fullscreenElement) {
@@ -86,10 +116,20 @@ const HeaderBar: React.FC<HeaderBarProps> = ({
     void document.documentElement.requestFullscreen?.().catch(() => {});
   };
 
+  const handleBrandKey = (event: React.KeyboardEvent) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      onNavigate(homePath);
+    }
+  };
+
   return (
-    <Header className={styles.header}>
+    <Header
+      className={[styles.header, isTop ? styles.headerTop : '']
+        .filter(Boolean)
+        .join(' ')}
+    >
       <div className={styles.headerLeft}>
-        {/* 桌面端折叠入口放在侧边栏底部，顶栏只保留面包屑 */}
         {isMobile ? (
           <Button
             type="text"
@@ -99,15 +139,41 @@ const HeaderBar: React.FC<HeaderBarProps> = ({
             aria-label="打开导航"
           />
         ) : null}
-        <Breadcrumb
-          className={styles.breadcrumb}
-          items={breadcrumbItems}
-          separator={<RightOutlined className={styles.crumbSeparator} />}
-        />
+        {isTop ? (
+          <>
+            <div
+              className={styles.topBrand}
+              role="button"
+              tabIndex={0}
+              title={SYSTEM_NAME}
+              onClick={() => onNavigate(homePath)}
+              onKeyDown={handleBrandKey}
+            >
+              <Logo size={30} />
+              <span className={styles.topBrandName}>{SYSTEM_NAME}</span>
+            </div>
+            {!isMobile ? (
+              <Menu
+                className={styles.topMenu}
+                theme="dark"
+                mode="horizontal"
+                items={menuItems}
+                selectedKeys={[menuActivePath]}
+                onClick={({ key }) => onNavigate(key)}
+              />
+            ) : null}
+          </>
+        ) : (
+          <Breadcrumb
+            className={styles.breadcrumb}
+            items={breadcrumbItems}
+            separator={<RightOutlined className={styles.crumbSeparator} />}
+          />
+        )}
       </div>
 
       <div className={styles.headerRight}>
-        <SearchMenu routes={routes} />
+        <SearchMenu routes={routes} onNavigate={onNavigate} />
 
         <Tooltip title={isFullscreen ? '退出全屏' : '全屏'}>
           <Button

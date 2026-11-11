@@ -1,9 +1,13 @@
 import {
+  Access,
   ConfirmButton,
   ExportButton,
   FormModal,
+  PageTable,
   StatusTag,
 } from '@/components';
+import { useAccess } from '@/hooks/useAccess';
+import { useTableRequest } from '@/hooks/useTableRequest';
 import {
   createUser,
   ExampleUser,
@@ -11,10 +15,9 @@ import {
   removeUser,
   updateUser,
 } from '@/services/example';
-import { ActionType, ProColumns, ProTable } from '@ant-design/pro-components';
-import { App, Button, Form, Input, Select } from 'antd';
+import { ActionType, ProColumns } from '@ant-design/pro-components';
+import { App, Button, Form, Input, Select, Space } from 'antd';
 import React, { useRef, useState } from 'react';
-import styles from './index.less';
 
 /** 示例：把列表数据转成 CSV Blob；接真实导出接口时直接返回接口 Blob 即可 */
 function toCsvBlob(list: ExampleUser[]): Blob {
@@ -40,14 +43,24 @@ function toCsvBlob(list: ExampleUser[]): Blob {
 }
 
 /**
- * 示例页面：mock 接口 + 请求封装 + ProTable 的标准 CRUD 写法
- * 搜索卡片、表格卡片、分页全部使用 ProTable 自带实现，布局只由 CSS 控制
+ * 示例页面：PageTable + useTableRequest + mock 接口的标准 CRUD 写法
+ * 菜单可见性由 example:list 控制，页面按钮由 Access 按权限码显隐
  */
 const ExamplePage: React.FC = () => {
   const { message } = App.useApp();
+  const { hasAnyPermission } = useAccess();
+  const canOperate = hasAnyPermission(['example:update', 'example:delete']);
   const actionRef = useRef<ActionType>();
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<ExampleUser>();
+
+  const request = useTableRequest(queryUsers, (params) => ({
+    current: params.current,
+    pageSize: params.pageSize,
+    keyword: params.name as string,
+    gender: params.gender as string,
+    status: params.status as string,
+  }));
 
   const openCreate = () => {
     setEditing(undefined);
@@ -79,6 +92,34 @@ const ExamplePage: React.FC = () => {
   const handleExport = async () => {
     const result = await queryUsers({ current: 1, pageSize: 100 });
     return toCsvBlob(result.list);
+  };
+
+  /** 行操作列：无任何行权限时整列隐藏，有权限时按钮再按各自权限码隐藏 */
+  const optionColumn: ProColumns<ExampleUser> = {
+    title: '操作',
+    valueType: 'option',
+    width: 120,
+    render: (_, record) => (
+      <Space size={4}>
+        <Access code="example:update">
+          <Button type="link" size="small" onClick={() => openEdit(record)}>
+            编辑
+          </Button>
+        </Access>
+        <Access code="example:delete">
+          <ConfirmButton
+            type="link"
+            danger
+            size="small"
+            confirmTitle="确认删除该用户？"
+            confirmProps={{ okText: '删除', cancelText: '取消' }}
+            onConfirm={() => handleDelete(record)}
+          >
+            删除
+          </ConfirmButton>
+        </Access>
+      </Space>
+    ),
   };
 
   const columns: ProColumns<ExampleUser>[] = [
@@ -128,79 +169,27 @@ const ExamplePage: React.FC = () => {
       width: 180,
       search: false,
     },
-    {
-      title: '操作',
-      valueType: 'option',
-      width: 120,
-      render: (_, record) => [
-        <Button
-          key="edit"
-          type="link"
-          size="small"
-          onClick={() => openEdit(record)}
-        >
-          编辑
-        </Button>,
-        <ConfirmButton
-          key="delete"
-          type="link"
-          danger
-          size="small"
-          confirmTitle="确认删除该用户？"
-          confirmProps={{ okText: '删除', cancelText: '取消' }}
-          onConfirm={() => handleDelete(record)}
-        >
-          删除
-        </ConfirmButton>,
-      ],
-    },
+    ...(canOperate ? [optionColumn] : []),
   ];
 
   return (
     <>
-      <div className={styles.tableWrap}>
-        <ProTable<ExampleUser>
-          headerTitle="列表示例"
-          rowKey="id"
-          actionRef={actionRef}
-          columns={columns}
-          search={{ labelWidth: 'auto' }}
-          pagination={{
-            defaultPageSize: 10,
-            showSizeChanger: true,
-            // ProTable 默认随表格尺寸把分页降为 small
-            size: 'middle',
-          }}
-          toolBarRender={() => [
-            <ExportButton key="export" onExport={handleExport} />,
-            <Button key="create" type="primary" onClick={openCreate}>
+      <PageTable<ExampleUser>
+        headerTitle="列表示例"
+        actionRef={actionRef}
+        columns={columns}
+        request={request}
+        toolBarRender={() => [
+          <Access key="export" code="example:export">
+            <ExportButton onExport={handleExport} />
+          </Access>,
+          <Access key="create" code="example:create">
+            <Button type="primary" onClick={openCreate}>
               新建用户
-            </Button>,
-          ]}
-          // 传 scroll.y 让 antd 拆出独立表头(.ant-table-header)和数据区(.ant-table-body)，
-          // 滚动条只出现在数据区。y 值只是开关，实际高度由 src/styles/table-layout.less 接管
-          scroll={{ y: 1 }}
-          request={async (params) => {
-            try {
-              const { current, pageSize, name, gender, status } = params;
-              const result = await queryUsers({
-                current,
-                pageSize,
-                keyword: name as string,
-                gender: gender as string,
-                status: status as string,
-              });
-              return {
-                data: result.list,
-                total: result.total,
-                success: true,
-              };
-            } catch {
-              return { data: [], total: 0, success: false };
-            }
-          }}
-        />
-      </div>
+            </Button>
+          </Access>,
+        ]}
+      />
 
       <FormModal<Partial<ExampleUser>>
         title={editing ? '编辑用户' : '新建用户'}

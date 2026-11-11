@@ -12,6 +12,7 @@ import { filterRoutesByAccess } from '@/router/tree';
 import { login } from '@/services/auth';
 import { useTabsStore } from '@/stores/tabs';
 import { clearAuth, getSafeRedirect, getToken, setAuth } from '@/utils/auth';
+import { setFlashNotice } from '@/utils/feedback';
 import { doneProgress } from '@/utils/progress';
 import { getRequestErrorMessage } from '@/utils/request-error';
 import {
@@ -20,7 +21,7 @@ import {
   LockOutlined,
   UserOutlined,
 } from '@ant-design/icons';
-import { Navigate, useModel, useSearchParams } from '@umijs/max';
+import { Navigate, useSearchParams } from '@umijs/max';
 import { App, Button, Form, Input } from 'antd';
 import React, { useEffect, useRef, useState } from 'react';
 import styles from './index.less';
@@ -35,9 +36,8 @@ function clamp(value: number) {
 }
 
 const LoginPage: React.FC = () => {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { message } = App.useApp();
-  const { setInitialState } = useModel('@@initialState');
   const [form] = Form.useForm<LoginFormValues>();
   const [loading, setLoading] = useState(false);
   const [passwordVisible, setPasswordVisible] = useState(false);
@@ -62,6 +62,16 @@ const LoginPage: React.FC = () => {
   useEffect(() => {
     doneProgress();
   }, []);
+
+  // 会话过期等一次性提示，展示后清掉 reason，避免刷新重复出现
+  useEffect(() => {
+    const reason = searchParams.get('reason');
+    if (!reason) return;
+    if (reason === 'expired') message.warning('登录已过期，请重新登录');
+    const next = new URLSearchParams(searchParams);
+    next.delete('reason');
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams, message]);
 
   useEffect(() => {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
@@ -170,7 +180,8 @@ const LoginPage: React.FC = () => {
       });
       loginToken = token;
       useTabsStore.getState().reset();
-      // 按登录接口返回的权限码直接过滤静态路由
+      if (getToken() !== token) return;
+      // 按登录接口返回的权限码过滤静态路由，校验回跳地址
       const access = accessFactory({
         menuPermissions: permissionSet.menus,
         buttonPermissions: permissionSet.buttons,
@@ -179,25 +190,11 @@ const LoginPage: React.FC = () => {
         staticRoutes,
         access.normalRouteFilter,
       );
-      if (getToken() !== token) return;
-      await setInitialState((previous) =>
-        getToken() === token
-          ? {
-              name: user?.nickName || user?.name || '',
-              avatar: user?.avatar,
-              roles: roleList,
-              menuPermissions: permissionSet.menus,
-              buttonPermissions: permissionSet.buttons,
-            }
-          : previous,
-      );
-      if (getToken() !== token) return;
-
       // 回跳地址必须是当前账号有权限访问的路由，否则进入第一个可访问页面
       const fallbackPath = getAffixPaths(routes)[0] ?? DEFAULT_ROUTE_PATH;
       const targetMatch = redirect ? matchRoute(redirect, routes) : undefined;
       const target = targetMatch ? redirect! : fallbackPath;
-      message.success('登录成功');
+      setFlashNotice('登录成功');
 
       // 整页刷新，确保布局、页签和菜单都按新账号权限重建
       window.location.replace(target);
@@ -225,9 +222,7 @@ const LoginPage: React.FC = () => {
       <div className={styles.loginCard}>
         <div className={styles.cardLeft}>
           <div className={styles.brand}>
-            <div className={styles.logoBox}>
-              <Logo size={30} />
-            </div>
+            <Logo size={40} />
             <span className={styles.brandName}>{SYSTEM_NAME}</span>
           </div>
 

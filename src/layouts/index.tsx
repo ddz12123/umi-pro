@@ -11,6 +11,7 @@ import {
   matchRoute,
 } from '@/router';
 import { useTabsStore } from '@/stores/tabs';
+import { useThemeStore } from '@/stores/theme';
 import { getLoginUrl, getToken } from '@/utils/auth';
 import { doneProgress } from '@/utils/progress';
 import { endSession } from '@/utils/session';
@@ -36,7 +37,8 @@ const { Sider, Content } = Layout;
 const BasicLayout: React.FC = () => {
   const location = useLocation();
   const isMobile = useIsMobile();
-  const { initialState, setInitialState } = useModel('@@initialState');
+  const layout = useThemeStore((state) => state.layout);
+  const { initialState } = useModel('@@initialState');
 
   const [collapsed, setCollapsed] = useState(
     () => local.getItem(SIDER_COLLAPSED_KEY) === '1',
@@ -49,6 +51,8 @@ const BasicLayout: React.FC = () => {
   const refreshTimer = useRef<number>();
 
   const routes = useMenuRoutes();
+  /** 顶部布局仅桌面端生效，移动端统一抽屉导航 */
+  const isTop = layout === 'top' && !isMobile;
 
   const tabPaths = useTabsStore((state) => state.tabs);
   const openTab = useTabsStore((state) => state.open);
@@ -139,8 +143,10 @@ const BasicLayout: React.FC = () => {
   }
 
   const navigate = (path: string) => {
-    history.push(path);
     setMobileMenuOpen(false);
+    // 重复点击当前地址不 push，避免无意义的加载进度和历史记录堆积
+    if (path === activeKey) return;
+    history.push(path);
   };
 
   const toggleSider = () => {
@@ -219,19 +225,12 @@ const BasicLayout: React.FC = () => {
   };
 
   const handleLogout = () => {
-    setInitialState({
-      name: '',
-      avatar: undefined,
-      roles: [],
-      menuPermissions: [],
-      buttonPermissions: [],
-    });
     endSession(false);
   };
 
   return (
     <Layout className={styles.root}>
-      {!isMobile ? (
+      {!isMobile && !isTop ? (
         <Sider
           className={styles.sider}
           theme="dark"
@@ -254,14 +253,17 @@ const BasicLayout: React.FC = () => {
 
       <Layout className={styles.main}>
         <HeaderBar
+          layout={isTop ? 'top' : 'side'}
           routes={routes}
           pathname={activePath}
+          menuActivePath={menuActivePath}
           isMobile={isMobile}
           userName={initialState?.name || ''}
           avatar={initialState?.avatar}
           onToggleSider={toggleSider}
           onOpenSettings={() => setSettingsOpen(true)}
           onLogout={handleLogout}
+          onNavigate={navigate}
         />
 
         {appConfig.tabs.enabled ? (
