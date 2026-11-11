@@ -260,7 +260,6 @@ let roles: MockRole[] = [
       'menu-system',
       'menu-system-user',
       'menu-system-role',
-      'menu-system-permission',
       'menu-example',
     ],
     createdAt: createdAt(13),

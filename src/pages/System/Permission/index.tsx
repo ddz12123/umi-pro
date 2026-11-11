@@ -1,3 +1,4 @@
+import { ConfirmButton, FormModal, StatusTag } from '@/components';
 import { useAccess } from '@/hooks/useAccess';
 import { routeIconKeys } from '@/router';
 import type {
@@ -18,8 +19,6 @@ import {
   Form,
   Input,
   InputNumber,
-  Modal,
-  Popconfirm,
   Select,
   TreeSelect,
 } from 'antd';
@@ -33,6 +32,12 @@ const ICON_TEXT: Record<string, string> = {
   user: '用户',
   role: '角色',
   menu: '菜单',
+};
+
+const PERMISSION_TYPE_TAGS = {
+  directory: { text: '菜单目录', color: 'processing' },
+  menu: { text: '菜单页面', color: 'success' },
+  button: { text: '按钮权限', color: 'default' },
 };
 
 interface ParentTreeNode {
@@ -82,7 +87,6 @@ const SystemPermissionPage: React.FC = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<SystemPermission>();
   const [createParent, setCreateParent] = useState<SystemPermission>();
-  const [submitting, setSubmitting] = useState(false);
 
   const parentTreeData = useMemo(
     () => buildParentTree(permissionTree, permissionType, editing?.id),
@@ -101,40 +105,54 @@ const SystemPermissionPage: React.FC = () => {
     setModalOpen(true);
   };
 
-  const handleSubmit = async () => {
-    try {
-      const values = await form.validateFields();
-      const payload: PermissionPayload = {
-        ...values,
-        parentId: values.parentId ?? null,
-        order: Number(values.order) || 1,
-      };
-      setSubmitting(true);
-      if (editing) {
-        await updateSystemPermission(editing.id, payload);
-        message.success('权限更新成功，刷新或重新登录后生效');
-      } else {
-        await createSystemPermission(payload);
-        message.success('权限创建成功，刷新或重新登录后生效');
-      }
-      setModalOpen(false);
-      actionRef.current?.reload();
-    } catch {
-      // 表单校验失败或接口异常，接口异常已由全局 errorHandler 提示
-    } finally {
-      setSubmitting(false);
+  const handleSubmit = async (values: PermissionPayload) => {
+    const payload: PermissionPayload = {
+      ...values,
+      parentId: values.parentId ?? null,
+      order: Number(values.order) || 1,
+    };
+    if (editing) {
+      await updateSystemPermission(editing.id, payload);
+      message.success('权限更新成功，刷新或重新登录后生效');
+    } else {
+      await createSystemPermission(payload);
+      message.success('权限创建成功，刷新或重新登录后生效');
     }
   };
 
   const handleDelete = async (record: SystemPermission) => {
-    try {
-      await removeSystemPermission(record.id);
-      message.success('权限删除成功，刷新或重新登录后生效');
-      actionRef.current?.reload();
-    } catch {
-      // 已由全局 errorHandler 提示
-    }
+    await removeSystemPermission(record.id);
+    message.success('权限删除成功，刷新或重新登录后生效');
+    actionRef.current?.reload();
   };
+
+  /** 打开弹窗时的回填数据：新增时按父级类型推断默认权限类型 */
+  const nextType: PermissionType =
+    createParent?.type === 'menu'
+      ? 'button'
+      : createParent?.type === 'directory'
+      ? 'menu'
+      : 'directory';
+  const initialValues: Partial<PermissionPayload> = editing
+    ? {
+        parentId: editing.parentId ?? undefined,
+        name: editing.name,
+        type: editing.type,
+        path: editing.path,
+        component: editing.component,
+        permission: editing.permission,
+        icon: editing.icon,
+        layoutMode: editing.layoutMode ?? 'fill',
+        order: editing.order,
+        status: editing.status,
+      }
+    : {
+        parentId: createParent?.id,
+        type: nextType,
+        status: 'active',
+        order: 1,
+        layoutMode: 'fill',
+      };
 
   const columns: ProColumns<SystemPermission>[] = [
     {
@@ -151,6 +169,9 @@ const SystemPermissionPage: React.FC = () => {
         menu: { text: '菜单页面', status: 'Success' },
         button: { text: '按钮权限', status: 'Default' },
       },
+      render: (_, record) => (
+        <StatusTag value={record.type} options={PERMISSION_TYPE_TAGS} />
+      ),
     },
     {
       title: '路由路径',
@@ -188,6 +209,7 @@ const SystemPermissionPage: React.FC = () => {
         active: { text: '启用', status: 'Success' },
         disabled: { text: '禁用', status: 'Default' },
       },
+      render: (_, record) => <StatusTag value={record.status} />,
     },
     {
       title: '操作',
@@ -221,18 +243,21 @@ const SystemPermissionPage: React.FC = () => {
         }
         if (canDelete) {
           actions.push(
-            <Popconfirm
+            <ConfirmButton
               key="delete"
-              title={`确认删除「${record.name}」？`}
-              description="存在子级时无法删除，删除后刷新页面路由生效。"
-              okText="删除"
-              cancelText="取消"
+              type="link"
+              danger
+              size="small"
+              confirmTitle={`确认删除「${record.name}」？`}
+              confirmProps={{
+                description: '存在子级时无法删除，删除后刷新页面路由生效。',
+                okText: '删除',
+                cancelText: '取消',
+              }}
               onConfirm={() => handleDelete(record)}
             >
-              <Button type="link" danger size="small">
-                删除
-              </Button>
-            </Popconfirm>,
+              删除
+            </ConfirmButton>,
           );
         }
         return actions.length ? actions : '-';
@@ -277,172 +302,137 @@ const SystemPermissionPage: React.FC = () => {
         />
       </div>
 
-      <Modal
+      <FormModal<PermissionPayload>
         title={editing ? '编辑权限' : '新建权限'}
         open={modalOpen}
-        onOk={handleSubmit}
+        form={form}
+        onSubmit={handleSubmit}
         onCancel={() => setModalOpen(false)}
-        confirmLoading={submitting}
-        destroyOnHidden
-        afterOpenChange={(open) => {
-          if (!open) return;
-          form.resetFields();
-          if (editing) {
-            form.setFieldsValue({
-              parentId: editing.parentId ?? undefined,
-              name: editing.name,
-              type: editing.type,
-              path: editing.path,
-              component: editing.component,
-              permission: editing.permission,
-              icon: editing.icon,
-              layoutMode: editing.layoutMode ?? 'fill',
-              order: editing.order,
-              status: editing.status,
-            });
-            return;
-          }
-          const nextType: PermissionType =
-            createParent?.type === 'menu'
-              ? 'button'
-              : createParent?.type === 'directory'
-              ? 'menu'
-              : 'directory';
-          form.setFieldsValue({
-            parentId: createParent?.id,
-            type: nextType,
-            status: 'active',
-            order: 1,
-            layoutMode: 'fill',
-          });
-        }}
+        onSuccess={() => actionRef.current?.reload()}
+        initialValues={initialValues}
         width={620}
       >
-        <Form form={form} layout="vertical" preserve={false}>
-          <Form.Item
-            name="type"
-            label="权限类型"
-            rules={[{ required: true, message: '请选择权限类型' }]}
-          >
-            <Select
-              disabled={Boolean(editing?.children?.length)}
-              options={[
-                { value: 'directory', label: '菜单目录' },
-                { value: 'menu', label: '菜单页面' },
-                { value: 'button', label: '按钮权限' },
-              ]}
-              onChange={() => form.setFieldValue('parentId', undefined)}
-            />
-          </Form.Item>
-          <Form.Item
-            name="parentId"
-            label="父级权限"
-            rules={
-              permissionType === 'button'
-                ? [{ required: true, message: '按钮权限必须选择父级菜单' }]
-                : undefined
+        <Form.Item
+          name="type"
+          label="权限类型"
+          rules={[{ required: true, message: '请选择权限类型' }]}
+        >
+          <Select
+            disabled={Boolean(editing?.children?.length)}
+            options={[
+              { value: 'directory', label: '菜单目录' },
+              { value: 'menu', label: '菜单页面' },
+              { value: 'button', label: '按钮权限' },
+            ]}
+            onChange={() => form.setFieldValue('parentId', undefined)}
+          />
+        </Form.Item>
+        <Form.Item
+          name="parentId"
+          label="父级权限"
+          rules={
+            permissionType === 'button'
+              ? [{ required: true, message: '按钮权限必须选择父级菜单' }]
+              : undefined
+          }
+        >
+          <TreeSelect
+            allowClear
+            treeDefaultExpandAll
+            treeData={parentTreeData}
+            placeholder={
+              permissionType === 'button' ? '请选择父级菜单' : '不选则为根节点'
             }
+          />
+        </Form.Item>
+        <Form.Item
+          name="name"
+          label="权限名称"
+          rules={[{ required: true, message: '请输入权限名称' }]}
+        >
+          <Input placeholder="例如：用户管理" />
+        </Form.Item>
+        {permissionType !== 'button' ? (
+          <Form.Item
+            name="path"
+            label="路由路径"
+            rules={[
+              { required: true, message: '请输入以 / 开头的路由路径' },
+              {
+                pattern: /^\/[a-zA-Z0-9_-]+(?:\/[a-zA-Z0-9_-]+)*$/,
+                message: '请使用规范的绝对路径，不能包含空段',
+              },
+            ]}
           >
-            <TreeSelect
+            <Input placeholder="例如：/system/user" />
+          </Form.Item>
+        ) : null}
+        {permissionType === 'menu' ? (
+          <Form.Item
+            name="component"
+            label="页面组件路径"
+            rules={[{ required: true, message: '请输入页面组件路径' }]}
+          >
+            <Input placeholder="例如：@/pages/System/User" />
+          </Form.Item>
+        ) : null}
+        <Form.Item
+          name="permission"
+          label="权限标识"
+          rules={
+            permissionType === 'directory'
+              ? undefined
+              : [
+                  {
+                    required: true,
+                    message:
+                      permissionType === 'button'
+                        ? '请输入按钮权限标识'
+                        : '请输入菜单权限标识',
+                  },
+                ]
+          }
+        >
+          <Input placeholder="例如：system:user:create" />
+        </Form.Item>
+        {permissionType !== 'button' ? (
+          <Form.Item name="icon" label="图标">
+            <Select
               allowClear
-              treeDefaultExpandAll
-              treeData={parentTreeData}
-              placeholder={
-                permissionType === 'button'
-                  ? '请选择父级菜单'
-                  : '不选则为根节点'
-              }
+              placeholder="可选"
+              options={routeIconKeys.map((key) => ({
+                value: key,
+                label: ICON_TEXT[key] ?? key,
+              }))}
             />
           </Form.Item>
-          <Form.Item
-            name="name"
-            label="权限名称"
-            rules={[{ required: true, message: '请输入权限名称' }]}
-          >
-            <Input placeholder="例如：用户管理" />
-          </Form.Item>
-          {permissionType !== 'button' ? (
-            <Form.Item
-              name="path"
-              label="路由路径"
-              rules={[
-                { required: true, message: '请输入以 / 开头的路由路径' },
-                {
-                  pattern: /^\/[a-zA-Z0-9_-]+(?:\/[a-zA-Z0-9_-]+)*$/,
-                  message: '请使用规范的绝对路径，不能包含空段',
-                },
-              ]}
-            >
-              <Input placeholder="例如：/system/user" />
-            </Form.Item>
-          ) : null}
-          {permissionType === 'menu' ? (
-            <Form.Item
-              name="component"
-              label="页面组件路径"
-              rules={[{ required: true, message: '请输入页面组件路径' }]}
-            >
-              <Input placeholder="例如：@/pages/System/User" />
-            </Form.Item>
-          ) : null}
-          <Form.Item
-            name="permission"
-            label="权限标识"
-            rules={
-              permissionType === 'directory'
-                ? undefined
-                : [
-                    {
-                      required: true,
-                      message:
-                        permissionType === 'button'
-                          ? '请输入按钮权限标识'
-                          : '请输入菜单权限标识',
-                    },
-                  ]
-            }
-          >
-            <Input placeholder="例如：system:user:create" />
-          </Form.Item>
-          {permissionType !== 'button' ? (
-            <Form.Item name="icon" label="图标">
-              <Select
-                allowClear
-                placeholder="可选"
-                options={routeIconKeys.map((key) => ({
-                  value: key,
-                  label: ICON_TEXT[key] ?? key,
-                }))}
-              />
-            </Form.Item>
-          ) : null}
-          {permissionType === 'menu' ? (
-            <Form.Item name="layoutMode" label="页面布局">
-              <Select
-                options={[
-                  { value: 'fill', label: '撑满（表格页）' },
-                  { value: 'page', label: '页面滚动（详情页）' },
-                ]}
-              />
-            </Form.Item>
-          ) : null}
-          <Form.Item
-            name="order"
-            label="排序"
-            rules={[{ required: true, message: '请输入排序值' }]}
-          >
-            <InputNumber min={0} precision={0} style={{ width: '100%' }} />
-          </Form.Item>
-          <Form.Item name="status" label="状态">
+        ) : null}
+        {permissionType === 'menu' ? (
+          <Form.Item name="layoutMode" label="页面布局">
             <Select
               options={[
-                { value: 'active', label: '启用' },
-                { value: 'disabled', label: '禁用' },
+                { value: 'fill', label: '撑满（表格页）' },
+                { value: 'page', label: '页面滚动（详情页）' },
               ]}
             />
           </Form.Item>
-        </Form>
-      </Modal>
+        ) : null}
+        <Form.Item
+          name="order"
+          label="排序"
+          rules={[{ required: true, message: '请输入排序值' }]}
+        >
+          <InputNumber min={0} precision={0} style={{ width: '100%' }} />
+        </Form.Item>
+        <Form.Item name="status" label="状态">
+          <Select
+            options={[
+              { value: 'active', label: '启用' },
+              { value: 'disabled', label: '禁用' },
+            ]}
+          />
+        </Form.Item>
+      </FormModal>
     </>
   );
 };

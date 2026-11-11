@@ -21,6 +21,7 @@
     "@ant-design/icons": "^6.3.4",
     "@ant-design/pro-components": "3.1.15-9",
     "@umijs/max": "^4.7.32",
+    "ahooks": "^3.11.0",
     "antd": "^6.7.0",
     "nprogress": "^0.2.0",
     "zustand": "^5.1.0"

@@ -1,3 +1,4 @@
+import { ConfirmButton, FormModal, StatusTag } from '@/components';
 import { useAccess } from '@/hooks/useAccess';
 import type {
   RoleOption,
@@ -12,7 +13,7 @@ import {
   updateSystemUser,
 } from '@/services/system';
 import { ActionType, ProColumns, ProTable } from '@ant-design/pro-components';
-import { App, Button, Form, Input, Modal, Popconfirm, Select, Tag } from 'antd';
+import { App, Button, Form, Input, Select, Tag } from 'antd';
 import React, { useEffect, useRef, useState } from 'react';
 import styles from '../index.less';
 
@@ -24,10 +25,8 @@ const SystemUserPage: React.FC = () => {
   const canUpdate = hasPermission('system:user:update');
   const canDelete = hasPermission('system:user:delete');
   const actionRef = useRef<ActionType>();
-  const [form] = Form.useForm<SystemUserPayload>();
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<SystemUser>();
-  const [submitting, setSubmitting] = useState(false);
   const [roleOptions, setRoleOptions] = useState<RoleOption[]>([]);
 
   useEffect(() => {
@@ -46,35 +45,33 @@ const SystemUserPage: React.FC = () => {
     setModalOpen(true);
   };
 
-  const handleSubmit = async () => {
-    try {
-      const values = await form.validateFields();
-      setSubmitting(true);
-      if (editing) {
-        await updateSystemUser(editing.id, values);
-        message.success('用户更新成功');
-      } else {
-        await createSystemUser(values);
-        message.success('用户创建成功');
-      }
-      setModalOpen(false);
-      actionRef.current?.reload();
-    } catch {
-      // 表单校验失败或接口异常，接口异常已由全局 errorHandler 提示
-    } finally {
-      setSubmitting(false);
+  const handleSubmit = async (values: SystemUserPayload) => {
+    if (editing) {
+      await updateSystemUser(editing.id, values);
+      message.success('用户更新成功');
+    } else {
+      await createSystemUser(values);
+      message.success('用户创建成功');
     }
   };
 
   const handleDelete = async (record: SystemUser) => {
-    try {
-      await removeSystemUser(record.id);
-      message.success('用户删除成功');
-      actionRef.current?.reload();
-    } catch {
-      // 已由全局 errorHandler 提示
-    }
+    await removeSystemUser(record.id);
+    message.success('用户删除成功');
+    actionRef.current?.reload();
   };
+
+  /** 打开弹窗时的回填数据 */
+  const initialValues: Partial<SystemUserPayload> = editing
+    ? {
+        username: editing.username,
+        nickName: editing.nickName,
+        email: editing.email,
+        mobile: editing.mobile,
+        roleIds: editing.roleIds,
+        status: editing.status,
+      }
+    : { status: 'active', roleIds: [] };
 
   /** 角色 id 转名称，兼容接口已返回 roleNames 和只返回 roleIds 的情况 */
   const getRoleNames = (record: SystemUser) =>
@@ -156,6 +153,7 @@ const SystemUserPage: React.FC = () => {
         active: { text: '启用', status: 'Success' },
         disabled: { text: '禁用', status: 'Default' },
       },
+      render: (_, record) => <StatusTag value={record.status} />,
     },
     {
       title: '创建时间',
@@ -184,17 +182,19 @@ const SystemUserPage: React.FC = () => {
         }
         if (canDelete) {
           actions.push(
-            <Popconfirm
+            <ConfirmButton
               key="delete"
-              title={`确认删除用户「${record.nickName || record.username}」？`}
-              okText="删除"
-              cancelText="取消"
+              type="link"
+              danger
+              size="small"
+              confirmTitle={`确认删除用户「${
+                record.nickName || record.username
+              }」？`}
+              confirmProps={{ okText: '删除', cancelText: '取消' }}
               onConfirm={() => handleDelete(record)}
             >
-              <Button type="link" danger size="small">
-                删除
-              </Button>
-            </Popconfirm>,
+              删除
+            </ConfirmButton>,
           );
         }
         return actions.length ? actions : '-';
@@ -244,86 +244,68 @@ const SystemUserPage: React.FC = () => {
         />
       </div>
 
-      <Modal
+      <FormModal<SystemUserPayload>
         title={editing ? '编辑用户' : '新建用户'}
         open={modalOpen}
-        onOk={handleSubmit}
+        onSubmit={handleSubmit}
         onCancel={() => setModalOpen(false)}
-        confirmLoading={submitting}
-        destroyOnHidden
-        afterOpenChange={(open) => {
-          if (!open) return;
-          form.resetFields();
-          if (editing) {
-            form.setFieldsValue({
-              username: editing.username,
-              nickName: editing.nickName,
-              email: editing.email,
-              mobile: editing.mobile,
-              roleIds: editing.roleIds,
-              status: editing.status,
-            });
-          } else {
-            form.setFieldsValue({ status: 'active', roleIds: [] });
-          }
-        }}
+        onSuccess={() => actionRef.current?.reload()}
+        initialValues={initialValues}
         width={560}
       >
-        <Form form={form} layout="vertical" preserve={false}>
-          <Form.Item
-            name="username"
-            label="用户名"
-            rules={[{ required: true, message: '请输入用户名' }]}
-          >
-            <Input placeholder="请输入登录用户名" disabled={Boolean(editing)} />
-          </Form.Item>
-          <Form.Item
-            name="nickName"
-            label="昵称"
-            rules={[{ required: true, message: '请输入昵称' }]}
-          >
-            <Input placeholder="请输入昵称" />
-          </Form.Item>
-          <Form.Item
-            name="roleIds"
-            label="角色"
-            rules={[{ required: true, message: '请至少选择一个角色' }]}
-          >
-            <Select
-              mode="multiple"
-              placeholder="请选择角色"
-              options={roleSelectOptions}
-            />
-          </Form.Item>
-          <Form.Item
-            name="email"
-            label="邮箱"
-            rules={[{ type: 'email', message: '邮箱格式不正确' }]}
-          >
-            <Input placeholder="请输入邮箱" />
-          </Form.Item>
-          <Form.Item
-            name="mobile"
-            label="手机号"
-            rules={[
-              {
-                pattern: /^1\d{10}$/,
-                message: '请输入 11 位手机号',
-              },
+        <Form.Item
+          name="username"
+          label="用户名"
+          rules={[{ required: true, message: '请输入用户名' }]}
+        >
+          <Input placeholder="请输入登录用户名" disabled={Boolean(editing)} />
+        </Form.Item>
+        <Form.Item
+          name="nickName"
+          label="昵称"
+          rules={[{ required: true, message: '请输入昵称' }]}
+        >
+          <Input placeholder="请输入昵称" />
+        </Form.Item>
+        <Form.Item
+          name="roleIds"
+          label="角色"
+          rules={[{ required: true, message: '请至少选择一个角色' }]}
+        >
+          <Select
+            mode="multiple"
+            placeholder="请选择角色"
+            options={roleSelectOptions}
+          />
+        </Form.Item>
+        <Form.Item
+          name="email"
+          label="邮箱"
+          rules={[{ type: 'email', message: '邮箱格式不正确' }]}
+        >
+          <Input placeholder="请输入邮箱" />
+        </Form.Item>
+        <Form.Item
+          name="mobile"
+          label="手机号"
+          rules={[
+            {
+              pattern: /^1\d{10}$/,
+              message: '请输入 11 位手机号',
+            },
+          ]}
+        >
+          <Input placeholder="请输入手机号" />
+        </Form.Item>
+        <Form.Item name="status" label="状态">
+          <Select
+            options={[
+              { value: 'active', label: '启用' },
+              { value: 'disabled', label: '禁用' },
             ]}
-          >
-            <Input placeholder="请输入手机号" />
-          </Form.Item>
-          <Form.Item name="status" label="状态">
-            <Select
-              options={[
-                { value: 'active', label: '启用' },
-                { value: 'disabled', label: '禁用' },
-              ]}
-            />
-          </Form.Item>
-        </Form>
-      </Modal>
+          />
+        </Form.Item>
+      </FormModal>
     </>
   );
 };

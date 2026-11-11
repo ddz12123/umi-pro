@@ -1,3 +1,4 @@
+import { ConfirmButton, FormModal, StatusTag } from '@/components';
 import { useAccess } from '@/hooks/useAccess';
 import type {
   RolePayload,
@@ -14,18 +15,7 @@ import {
   updateSystemRolePermissions,
 } from '@/services/system';
 import { ActionType, ProColumns, ProTable } from '@ant-design/pro-components';
-import {
-  App,
-  Button,
-  Form,
-  Input,
-  Modal,
-  Popconfirm,
-  Select,
-  Spin,
-  Tag,
-  Tree,
-} from 'antd';
+import { App, Button, Form, Input, Modal, Select, Spin, Tag, Tree } from 'antd';
 import type { DataNode } from 'antd/es/tree';
 import React, { useRef, useState } from 'react';
 import styles from '../index.less';
@@ -68,10 +58,8 @@ const SystemRolePage: React.FC = () => {
   const canDelete = hasPermission('system:role:delete');
   const canPermission = hasPermission('system:role:permission');
   const actionRef = useRef<ActionType>();
-  const [form] = Form.useForm<RolePayload>();
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<SystemRole>();
-  const [submitting, setSubmitting] = useState(false);
 
   const [permissionOpen, setPermissionOpen] = useState(false);
   const [permissionRole, setPermissionRole] = useState<SystemRole>();
@@ -90,35 +78,31 @@ const SystemRolePage: React.FC = () => {
     setModalOpen(true);
   };
 
-  const handleSubmit = async () => {
-    try {
-      const values = await form.validateFields();
-      setSubmitting(true);
-      if (editing) {
-        await updateSystemRole(editing.id, values);
-        message.success('角色更新成功');
-      } else {
-        await createSystemRole(values);
-        message.success('角色创建成功');
-      }
-      setModalOpen(false);
-      actionRef.current?.reload();
-    } catch {
-      // 表单校验失败或接口异常，接口异常已由全局 errorHandler 提示
-    } finally {
-      setSubmitting(false);
+  const handleSubmit = async (values: RolePayload) => {
+    if (editing) {
+      await updateSystemRole(editing.id, values);
+      message.success('角色更新成功');
+    } else {
+      await createSystemRole(values);
+      message.success('角色创建成功');
     }
   };
 
   const handleDelete = async (record: SystemRole) => {
-    try {
-      await removeSystemRole(record.id);
-      message.success('角色删除成功');
-      actionRef.current?.reload();
-    } catch {
-      // 已由全局 errorHandler 提示
-    }
+    await removeSystemRole(record.id);
+    message.success('角色删除成功');
+    actionRef.current?.reload();
   };
+
+  /** 打开弹窗时的回填数据 */
+  const initialValues: Partial<RolePayload> = editing
+    ? {
+        name: editing.name,
+        code: editing.code,
+        description: editing.description,
+        status: editing.status,
+      }
+    : { status: 'active' };
 
   /** 打开权限弹窗时同时加载菜单树和角色已有权限 */
   const openPermission = async (record: SystemRole) => {
@@ -195,6 +179,7 @@ const SystemRolePage: React.FC = () => {
         active: { text: '启用', status: 'Success' },
         disabled: { text: '禁用', status: 'Default' },
       },
+      render: (_, record) => <StatusTag value={record.status} />,
     },
     {
       title: '创建时间',
@@ -236,22 +221,18 @@ const SystemRolePage: React.FC = () => {
         }
         if (canDelete) {
           actions.push(
-            <Popconfirm
+            <ConfirmButton
               key="delete"
-              title={`确认删除角色「${record.name}」？`}
-              okText="删除"
-              cancelText="取消"
+              type="link"
+              danger
+              size="small"
+              disabled={record.code === 'SUPER_ADMIN'}
+              confirmTitle={`确认删除角色「${record.name}」？`}
+              confirmProps={{ okText: '删除', cancelText: '取消' }}
               onConfirm={() => handleDelete(record)}
             >
-              <Button
-                type="link"
-                danger
-                size="small"
-                disabled={record.code === 'SUPER_ADMIN'}
-              >
-                删除
-              </Button>
-            </Popconfirm>,
+              删除
+            </ConfirmButton>,
           );
         }
         return actions.length ? actions : '-';
@@ -300,63 +281,47 @@ const SystemRolePage: React.FC = () => {
         />
       </div>
 
-      <Modal
+      <FormModal<RolePayload>
         title={editing ? '编辑角色' : '新建角色'}
         open={modalOpen}
-        onOk={handleSubmit}
+        onSubmit={handleSubmit}
         onCancel={() => setModalOpen(false)}
-        confirmLoading={submitting}
-        destroyOnHidden
-        afterOpenChange={(open) => {
-          if (!open) return;
-          form.resetFields();
-          if (editing) {
-            form.setFieldsValue({
-              name: editing.name,
-              code: editing.code,
-              description: editing.description,
-              status: editing.status,
-            });
-          } else {
-            form.setFieldsValue({ status: 'active' });
-          }
-        }}
+        onSuccess={() => actionRef.current?.reload()}
+        initialValues={initialValues}
         width={540}
       >
-        <Form form={form} layout="vertical" preserve={false}>
-          <Form.Item
-            name="name"
-            label="角色名称"
-            rules={[{ required: true, message: '请输入角色名称' }]}
-          >
-            <Input placeholder="例如：运营管理员" />
-          </Form.Item>
-          <Form.Item
-            name="code"
-            label="角色编码"
-            rules={[
-              { required: true, message: '请输入角色编码' },
-              {
-                pattern: /^[A-Z][A-Z0-9_]*$/,
-                message: '只能包含大写字母、数字和下划线',
-              },
+        <Form.Item
+          name="name"
+          label="角色名称"
+          rules={[{ required: true, message: '请输入角色名称' }]}
+        >
+          <Input placeholder="例如：运营管理员" />
+        </Form.Item>
+        <Form.Item
+          name="code"
+          label="角色编码"
+          rules={[
+            { required: true, message: '请输入角色编码' },
+            {
+              pattern: /^[A-Z][A-Z0-9_]*$/,
+              message: '只能包含大写字母、数字和下划线',
+            },
+          ]}
+        >
+          <Input placeholder="例如：OPS_ADMIN" disabled={Boolean(editing)} />
+        </Form.Item>
+        <Form.Item name="description" label="描述">
+          <Input.TextArea rows={3} placeholder="请输入角色职责说明" />
+        </Form.Item>
+        <Form.Item name="status" label="状态">
+          <Select
+            options={[
+              { value: 'active', label: '启用' },
+              { value: 'disabled', label: '禁用' },
             ]}
-          >
-            <Input placeholder="例如：OPS_ADMIN" disabled={Boolean(editing)} />
-          </Form.Item>
-          <Form.Item name="description" label="描述">
-            <Input.TextArea rows={3} placeholder="请输入角色职责说明" />
-          </Form.Item>
-          <Form.Item name="status" label="状态">
-            <Select
-              options={[
-                { value: 'active', label: '启用' },
-                { value: 'disabled', label: '禁用' },
-              ]}
-            />
-          </Form.Item>
-        </Form>
-      </Modal>
+          />
+        </Form.Item>
+      </FormModal>
 
       <Modal
         title={`角色权限${permissionRole ? `：${permissionRole.name}` : ''}`}

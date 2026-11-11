@@ -1,7 +1,17 @@
-import { DEFAULT_ROUTE_PATH, LOGIN_PATH, NOT_FOUND_PATH } from './paths';
+import {
+  DEFAULT_ROUTE_PATH,
+  FORBIDDEN_PATH,
+  LOGIN_PATH,
+  NOT_FOUND_PATH,
+} from './paths';
 import type { AppRoute, UmiRouteConfig } from './types';
 
-export { DEFAULT_ROUTE_PATH, LOGIN_PATH, NOT_FOUND_PATH } from './paths';
+export {
+  DEFAULT_ROUTE_PATH,
+  FORBIDDEN_PATH,
+  LOGIN_PATH,
+  NOT_FOUND_PATH,
+} from './paths';
 
 /**
  * 全量静态路由
@@ -62,6 +72,15 @@ export const staticRoutes: AppRoute[] = [
     layoutMode: 'fill',
     access: 'example:list',
     order: 20,
+  },
+  {
+    name: '403 页面',
+    path: FORBIDDEN_PATH,
+    component: 'Exception/403',
+    layoutMode: 'page',
+    hideInMenu: true,
+    hideInTabs: true,
+    fullScreen: true,
   },
   {
     name: '404 页面',

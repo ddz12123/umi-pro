@@ -1,0 +1,10 @@
+/**
+ * 长表单只在内容区滚动：标题栏与确定/取消按钮始终可见。
+ * 减去顶栏、底栏、内外边距以及 Modal 默认的顶部偏移。
+ */
+.scrollBody {
+  max-height: calc(100vh - 300px);
+  padding-right: 4px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
