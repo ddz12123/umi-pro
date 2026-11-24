@@ -1,7 +1,7 @@
 import { useFormSubmit } from '@/hooks/useFormSubmit';
 import type { FormInstance } from 'antd';
 import { Button, Drawer, Form } from 'antd';
-import React from 'react';
+import React, { useRef } from 'react';
 import styles from './index.less';
 
 type DrawerProps = React.ComponentProps<typeof Drawer>;
@@ -48,6 +48,13 @@ function DrawerForm<V extends object = Record<string, unknown>>({
 }: DrawerFormProps<V>) {
   const [innerForm] = Form.useForm<V>();
   const form = externalForm ?? innerForm;
+  const prevOpenRef = useRef(false);
+  const mountKeyRef = useRef(0);
+  if (open && !prevOpenRef.current) {
+    mountKeyRef.current += 1;
+  }
+  prevOpenRef.current = open;
+
   const { submitting, handleSubmit } = useFormSubmit({
     form,
     onSubmit,
@@ -57,7 +64,7 @@ function DrawerForm<V extends object = Record<string, unknown>>({
 
   return (
     <Drawer
-      width={520}
+      size={520}
       {...drawerProps}
       destroyOnHidden
       open={open}
@@ -73,6 +80,7 @@ function DrawerForm<V extends object = Record<string, unknown>>({
       }
     >
       <Form<V>
+        key={mountKeyRef.current}
         form={form}
         layout={formLayout}
         preserve={false}

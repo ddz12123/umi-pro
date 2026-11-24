@@ -1,5 +1,4 @@
-import { Access } from '@/components';
-import PageHeader from '@/components/PageHeader';
+import { PageHeader } from '@/components';
 import { useMenuRoutes } from '@/hooks/useMenuRoutes';
 import { findRouteByComponent } from '@/router';
 import { history, useModel } from '@umijs/max';
@@ -47,15 +46,15 @@ const HomePage: React.FC = () => {
               菜单和访问控制按权限码过滤。列表示例演示分页查询与增删改。
             </Typography.Paragraph>
           </div>
-          <Access code="example:list">
+          {examplePath ? (
             <Button
               type="primary"
               size="large"
-              onClick={() => examplePath && history.push(examplePath)}
+              onClick={() => history.push(examplePath)}
             >
               查看示例页面
             </Button>
-          </Access>
+          ) : null}
         </section>
 
         <Row gutter={[16, 16]}>

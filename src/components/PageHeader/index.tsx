@@ -1,7 +1,7 @@
 import React from 'react';
 import styles from './index.less';
 
-interface PageHeaderProps {
+export interface PageHeaderProps {
   title: React.ReactNode;
   description?: React.ReactNode;
   extra?: React.ReactNode;

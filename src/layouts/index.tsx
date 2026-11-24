@@ -17,6 +17,7 @@ import { doneProgress } from '@/utils/progress';
 import { endSession } from '@/utils/session';
 import { local } from '@/utils/storage';
 import { Navigate, Outlet, history, useLocation, useModel } from '@umijs/max';
+import { useMemoizedFn } from 'ahooks';
 import { Drawer, Layout } from 'antd';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import HeaderBar from './components/HeaderBar';
@@ -133,23 +134,14 @@ const BasicLayout: React.FC = () => {
     [],
   );
 
-  if (!getToken()) {
-    return (
-      <Navigate
-        to={getLoginUrl(activePath, location.search, location.hash)}
-        replace
-      />
-    );
-  }
-
-  const navigate = (path: string) => {
+  const navigate = useMemoizedFn((path: string) => {
     setMobileMenuOpen(false);
     // 重复点击当前地址不 push，避免无意义的加载进度和历史记录堆积
     if (path === activeKey) return;
     history.push(path);
-  };
+  });
 
-  const toggleSider = () => {
+  const toggleSider = useMemoizedFn(() => {
     if (isMobile) {
       setMobileMenuOpen(true);
       return;
@@ -159,17 +151,17 @@ const BasicLayout: React.FC = () => {
       local.setItem(SIDER_COLLAPSED_KEY, next ? '1' : '0');
       return next;
     });
-  };
+  });
 
-  const refreshTab = (path: string) => {
+  const refreshTab = useMemoizedFn((path: string) => {
     if (path !== activeKey) history.push(path);
     setRefreshKey((key) => key + 1);
     setRefreshing(true);
     if (refreshTimer.current) window.clearTimeout(refreshTimer.current);
     refreshTimer.current = window.setTimeout(() => setRefreshing(false), 600);
-  };
+  });
 
-  const handleCloseTab = (key: string) => {
+  const handleCloseTab = useMemoizedFn((key: string) => {
     if (affixPaths.includes(key)) return;
 
     const index = tabItems.findIndex((tab) => tab.key === key);
@@ -182,16 +174,16 @@ const BasicLayout: React.FC = () => {
       remaining[index - 1] ??
       remaining.find((tab) => tab.affix);
     navigate(next?.key || affixPaths[0] || DEFAULT_ROUTE_PATH);
-  };
+  });
 
-  const handleCloseOthers = (key: string) => {
+  const handleCloseOthers = useMemoizedFn((key: string) => {
     closeOthers(key);
     if (key !== activeKey && !affixPaths.includes(activeKey)) {
       navigate(key);
     }
-  };
+  });
 
-  const handleCloseLeft = (key: string) => {
+  const handleCloseLeft = useMemoizedFn((key: string) => {
     const targetIndex = tabItems.findIndex((tab) => tab.key === key);
     const activeIndex = tabItems.findIndex((tab) => tab.key === activeKey);
     closeLeft(key);
@@ -202,9 +194,9 @@ const BasicLayout: React.FC = () => {
     ) {
       navigate(key);
     }
-  };
+  });
 
-  const handleCloseRight = (key: string) => {
+  const handleCloseRight = useMemoizedFn((key: string) => {
     const targetIndex = tabItems.findIndex((tab) => tab.key === key);
     const activeIndex = tabItems.findIndex((tab) => tab.key === activeKey);
     closeRight(key);
@@ -215,18 +207,27 @@ const BasicLayout: React.FC = () => {
     ) {
       navigate(key);
     }
-  };
+  });
 
-  const handleCloseAll = () => {
+  const handleCloseAll = useMemoizedFn(() => {
     closeAll();
     if (!affixPaths.includes(activeKey)) {
       navigate(affixPaths[0] || DEFAULT_ROUTE_PATH);
     }
-  };
+  });
 
-  const handleLogout = () => {
+  const handleLogout = useMemoizedFn(() => {
     endSession(false);
-  };
+  });
+
+  if (!getToken()) {
+    return (
+      <Navigate
+        to={getLoginUrl(activePath, location.search, location.hash)}
+        replace
+      />
+    );
+  }
 
   return (
     <Layout className={styles.root}>

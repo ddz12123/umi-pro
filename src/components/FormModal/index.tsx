@@ -1,7 +1,7 @@
 import { useFormSubmit } from '@/hooks/useFormSubmit';
 import type { FormInstance } from 'antd';
 import { Form, Modal } from 'antd';
-import React from 'react';
+import React, { useRef } from 'react';
 import styles from './index.less';
 
 type ModalProps = React.ComponentProps<typeof Modal>;
@@ -58,6 +58,13 @@ function FormModal<V extends object = Record<string, unknown>>({
 }: FormModalProps<V>) {
   const [innerForm] = Form.useForm<V>();
   const form = externalForm ?? innerForm;
+  const prevOpenRef = useRef(false);
+  const mountKeyRef = useRef(0);
+  if (open && !prevOpenRef.current) {
+    mountKeyRef.current += 1;
+  }
+  prevOpenRef.current = open;
+
   const { submitting, handleSubmit } = useFormSubmit({
     form,
     onSubmit,
@@ -85,6 +92,7 @@ function FormModal<V extends object = Record<string, unknown>>({
         }
       >
         <Form<V>
+          key={mountKeyRef.current}
           form={form}
           layout={formLayout}
           preserve={false}

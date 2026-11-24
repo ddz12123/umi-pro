@@ -1,6 +1,6 @@
 import { useMemoizedFn } from 'ahooks';
 import type { FormInstance } from 'antd';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 
 interface FormSubmitOptions<V> {
   form: FormInstance<V>;
@@ -17,14 +17,17 @@ export function useFormSubmit<V>({
   onClose,
 }: FormSubmitOptions<V>) {
   const [submitting, setSubmitting] = useState(false);
+  const submittingRef = useRef(false);
 
   const handleSubmit = useMemoizedFn(async () => {
+    if (submittingRef.current) return;
     let values: V;
     try {
       values = await form.validateFields();
     } catch {
       return;
     }
+    submittingRef.current = true;
     setSubmitting(true);
     try {
       await onSubmit(values);
@@ -33,6 +36,7 @@ export function useFormSubmit<V>({
     } catch {
       // 接口异常已由全局 errorHandler 提示，容器保持打开以便重试
     } finally {
+      submittingRef.current = false;
       setSubmitting(false);
     }
   });

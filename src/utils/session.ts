@@ -7,12 +7,11 @@ let sessionEnded = false;
 
 /** 统一清理登录态和页签并回到登录页；reason 供登录页展示一次性提示。 */
 export function endSession(returnToCurrent = true, reason?: string) {
-  if (sessionEnded) return;
-  sessionEnded = true;
   const { pathname, search, hash } = window.location;
   clearAuth();
   useTabsStore.getState().reset();
-  if (isLoginPath(pathname)) return;
+  if (isLoginPath(pathname) || sessionEnded) return;
+  sessionEnded = true;
 
   let target = returnToCurrent
     ? getLoginUrl(pathname, search, hash)

@@ -1,5 +1,5 @@
 import { Button, Popconfirm } from 'antd';
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 
 type ButtonProps = React.ComponentProps<typeof Button>;
 type PopconfirmProps = React.ComponentProps<typeof Popconfirm>;
@@ -24,14 +24,18 @@ const ConfirmButton: React.FC<ConfirmButtonProps> = ({
   ...buttonProps
 }) => {
   const [pending, setPending] = useState(false);
+  const pendingRef = useRef(false);
 
   const handleConfirm = async () => {
+    if (pendingRef.current) return;
+    pendingRef.current = true;
     setPending(true);
     try {
       await onConfirm();
     } catch {
       // 接口异常由业务或全局 errorHandler 提示
     } finally {
+      pendingRef.current = false;
       setPending(false);
     }
   };

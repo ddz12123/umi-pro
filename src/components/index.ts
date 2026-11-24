@@ -9,6 +9,8 @@ export { default as ExportButton } from './ExportButton';
 export type { ExportButtonProps } from './ExportButton';
 export { default as FormModal } from './FormModal';
 export type { FormModalOwnProps, FormModalProps } from './FormModal';
+export { default as PageHeader } from './PageHeader';
+export type { PageHeaderProps } from './PageHeader';
 export { default as PageTable } from './PageTable';
 export { default as StatusTag } from './StatusTag';
 export type {

@@ -75,9 +75,9 @@ const SettingsDrawer: React.FC<SettingsDrawerProps> = ({ open, onClose }) => {
     <Drawer
       open={open}
       onClose={onClose}
-      width={360}
+      size={360}
       title="界面设置"
-      className={styles.drawer}
+      rootClassName={styles.drawer}
     >
       <section className={styles.section}>
         <div className={styles.sectionTitle}>主题色</div>

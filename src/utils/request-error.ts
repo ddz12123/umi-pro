@@ -1,3 +1,4 @@
+import { apiConfig } from '@/config/api';
 import type { AxiosError } from '@umijs/max';
 import { BizError } from './response';
 
@@ -18,6 +19,14 @@ export function getRequestErrorMessage(error: unknown): string {
   if (error instanceof BizError) return error.message;
   const value = error as AxiosError | undefined;
   if (value?.response) {
+    const data = value.response.data as Record<string, unknown> | undefined;
+    const serverMessage =
+      data && typeof data === 'object'
+        ? data[apiConfig.response.messageField]
+        : undefined;
+    if (typeof serverMessage === 'string' && serverMessage.trim()) {
+      return serverMessage;
+    }
     return (
       statusMessages[value.response.status] ||
       `请求失败（${value.response.status}）`

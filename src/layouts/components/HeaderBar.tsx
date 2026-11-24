@@ -1,11 +1,7 @@
 import Logo from '@/components/Logo';
 import { SYSTEM_NAME } from '@/constants/app';
 import type { AppRoute } from '@/router';
-import {
-  DEFAULT_ROUTE_PATH,
-  getAffixPaths,
-  getBreadcrumbChain,
-} from '@/router';
+import { getBreadcrumbChain, getHomePath } from '@/router';
 import {
   DownOutlined,
   FullscreenExitOutlined,
@@ -27,7 +23,7 @@ import {
 } from 'antd';
 import React, { useEffect, useMemo, useState } from 'react';
 import styles from '../index.less';
-import { getMenuIcon } from './menu-icons';
+import { getRouteIcon } from './menu-icons';
 import SearchMenu from './SearchMenu';
 import { buildMenuItems } from './Sidebar';
 
@@ -74,20 +70,14 @@ const HeaderBar: React.FC<HeaderBarProps> = ({
   }, []);
 
   const menuItems = useMemo(() => buildMenuItems(routes), [routes]);
-  const homePath = useMemo(
-    () =>
-      getAffixPaths(routes)[0] ??
-      routes.find((route) => route.component && !route.hideInMenu)?.path ??
-      DEFAULT_ROUTE_PATH,
-    [routes],
-  );
+  const homePath = useMemo(() => getHomePath(routes), [routes]);
 
   /** 面包屑严格取自路由链，父级可点击返回。 */
   const breadcrumbItems = useMemo<BreadcrumbProps['items']>(() => {
     const chain = getBreadcrumbChain(pathname, routes);
     return chain.map((route, index) => {
       const last = index === chain.length - 1;
-      const icon = getMenuIcon(route.icon, 0);
+      const icon = getRouteIcon(route.icon);
       return {
         title: last ? (
           <span className={styles.crumbCurrent} title={route.name}>
@@ -173,7 +163,12 @@ const HeaderBar: React.FC<HeaderBarProps> = ({
       </div>
 
       <div className={styles.headerRight}>
-        <SearchMenu routes={routes} onNavigate={onNavigate} />
+        <SearchMenu
+          routes={routes}
+          currentPath={pathname}
+          dark={isTop}
+          onNavigate={onNavigate}
+        />
 
         <Tooltip title={isFullscreen ? '退出全屏' : '全屏'}>
           <Button

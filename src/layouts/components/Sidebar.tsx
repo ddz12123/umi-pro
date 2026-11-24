@@ -2,7 +2,7 @@ import Logo from '@/components/Logo';
 import { appConfig } from '@/config/app';
 import { SYSTEM_NAME } from '@/constants/app';
 import type { AppRoute } from '@/router';
-import { DEFAULT_ROUTE_PATH, getAffixPaths } from '@/router';
+import { getHomePath } from '@/router';
 import { isConcretePath } from '@/router/tree';
 import {
   CloseOutlined,
@@ -86,13 +86,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     onToggleCollapse?.();
   };
 
-  const homePath = useMemo(
-    () =>
-      getAffixPaths(routes)[0] ??
-      routes.find((route) => route.component && !route.hideInMenu)?.path ??
-      DEFAULT_ROUTE_PATH,
-    [routes],
-  );
+  const homePath = useMemo(() => getHomePath(routes), [routes]);
 
   return (
     <div className={styles.sidebar}>

@@ -34,7 +34,7 @@ const AppProviders: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   const primaryColor = useThemeStore((state) => state.primaryColor);
 
-  React.useEffect(() => {
+  React.useLayoutEffect(() => {
     applyThemeCssVars(primaryColor);
   }, [primaryColor]);
 
@@ -69,6 +69,8 @@ export function rootContainer(container: React.ReactNode) {
   return <AppProviders>{container}</AppProviders>;
 }
 
+let lastPathname: string | undefined;
+
 /** 路由变化时同步浏览器标题：登录页、业务页、未知页分别处理。 */
 export function onRouteChange({
   location,
@@ -76,9 +78,17 @@ export function onRouteChange({
   location: { pathname: string };
 }) {
   const { pathname } = location;
-  startProgress();
+  // 仅路径真正变化时触发顶部进度条，避免 query/hash 变更导致进度条卡住
+  if (pathname !== lastPathname) {
+    lastPathname = pathname;
+    startProgress();
+  }
   if (isLoginPath(pathname)) {
     document.title = `登录 · ${SYSTEM_NAME}`;
+    return;
+  }
+  if (pathname === '/') {
+    document.title = SYSTEM_NAME;
     return;
   }
   document.title = matchRoute(pathname, staticRoutes)

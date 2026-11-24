@@ -1,8 +1,9 @@
 import { matchRoutes } from '@umijs/max';
 import { SYSTEM_NAME } from '../constants/app';
+import { DEFAULT_ROUTE_PATH } from './paths';
 import { staticRoutes } from './static-routes';
 import { flattenAppRoutes, getGroupLandingPath, isConcretePath } from './tree';
-import type { AppRoute } from './types';
+import type { AppRoute, RouteIcon } from './types';
 
 export { getGroupLandingPath } from './tree';
 
@@ -118,6 +119,18 @@ export function getAffixPaths(routes: AppRoute[] = staticRoutes): string[] {
     .map(({ route }) => route.path);
 }
 
+/** 当前权限路由下的默认首页路径：优先固定页签，其次首个可见页面，最后兜底默认路由。 */
+export function getHomePath(routes: AppRoute[] = staticRoutes): string {
+  return (
+    getAffixPaths(routes)[0] ??
+    getRouteIndex(routes).leaves.find(
+      ({ route, chain }) =>
+        !chain.some((node) => node.hideInMenu) && isConcretePath(route.path),
+    )?.route.path ??
+    DEFAULT_ROUTE_PATH
+  );
+}
+
 /** 浏览器标题：页面名称 + 系统名称。 */
 export function getRouteTitle(
   pathname: string,
@@ -131,9 +144,10 @@ export interface SearchEntry {
   path: string;
   name: string;
   trail: string[];
+  icon?: RouteIcon;
 }
 
-/** 顶部搜索索引，排除隐藏菜单和带参数的详情页。 */
+/** 顶部搜索索引，排除隐藏菜单和带参数的详情页；子路由继承最近的父级图标。 */
 export function getSearchEntries(
   routes: AppRoute[] = staticRoutes,
 ): SearchEntry[] {
@@ -142,9 +156,21 @@ export function getSearchEntries(
       ({ route, chain }) =>
         !chain.some((node) => node.hideInMenu) && isConcretePath(route.path),
     )
-    .map(({ route, chain }) => ({
-      path: route.path,
-      name: route.name,
-      trail: chain.slice(0, -1).map((parent) => parent.name),
-    }));
+    .map(({ route, chain }) => {
+      let icon = route.icon;
+      if (!icon) {
+        for (let index = chain.length - 1; index >= 0; index -= 1) {
+          if (chain[index].icon) {
+            icon = chain[index].icon;
+            break;
+          }
+        }
+      }
+      return {
+        path: route.path,
+        name: route.name,
+        trail: chain.slice(0, -1).map((parent) => parent.name),
+        icon,
+      };
+    });
 }

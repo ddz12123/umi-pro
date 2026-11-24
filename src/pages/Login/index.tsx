@@ -4,7 +4,7 @@ import { SYSTEM_NAME } from '@/constants/app';
 import { useMenuRoutes } from '@/hooks/useMenuRoutes';
 import {
   DEFAULT_ROUTE_PATH,
-  getAffixPaths,
+  getHomePath,
   matchRoute,
   staticRoutes,
 } from '@/router';
@@ -23,8 +23,14 @@ import {
 } from '@ant-design/icons';
 import { Navigate, useSearchParams } from '@umijs/max';
 import { App, Button, Form, Input } from 'antd';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useId, useRef, useState } from 'react';
 import styles from './index.less';
+
+const DEMO_ACCOUNTS = [
+  { username: 'admin', label: '管理员' },
+  { username: 'operator', label: '运营' },
+  { username: 'viewer', label: '访客' },
+] as const;
 
 interface LoginFormValues {
   username: string;
@@ -42,6 +48,10 @@ const LoginPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [isPasswordFocused, setIsPasswordFocused] = useState(false);
+  const svgId = useId();
+  const headGradId = `${svgId}-head`;
+  const faceGradId = `${svgId}-face`;
+  const antennaGlowId = `${svgId}-antenna`;
 
   // 鼠标跟随 / 眼睛追踪
   const mascotRef = useRef<HTMLDivElement>(null);
@@ -78,71 +88,101 @@ const LoginPage: React.FC = () => {
       return undefined;
     }
 
-    let mouseX = window.innerWidth / 2;
-    let mouseY = window.innerHeight / 2;
+    let targetX = 0;
+    let targetY = 0;
     let currentX = 0;
     let currentY = 0;
     let frame = 0;
+    let mascotCenterX = 0;
+    let mascotCenterY = 0;
+    let hasMascot = false;
 
-    const handleMouseMove = (event: MouseEvent) => {
-      mouseX = event.clientX;
-      mouseY = event.clientY;
+    const measureMascot = () => {
+      const rect = mascotRef.current?.getBoundingClientRect();
+      hasMascot = Boolean(rect?.width);
+      if (rect?.width) {
+        mascotCenterX = rect.left + rect.width / 2;
+        mascotCenterY = rect.top + rect.height / 2;
+      }
     };
 
     const tick = () => {
-      const rect = mascotRef.current?.getBoundingClientRect();
-      if (rect?.width) {
-        const targetX = clamp(
-          (mouseX - (rect.left + rect.width / 2)) / (window.innerWidth / 2),
-        );
-        const targetY = clamp(
-          (mouseY - (rect.top + rect.height / 2)) / (window.innerHeight / 2),
-        );
+      frame = 0;
+      if (!hasMascot || document.hidden) return;
 
-        // 弹簧式插值，略带惰性
-        currentX += (targetX - currentX) * 0.07;
-        currentY += (targetY - currentY) * 0.07;
+      // 弹簧式插值，略带惰性；趋稳后停止调度避免空转
+      currentX += (targetX - currentX) * 0.07;
+      currentY += (targetY - currentY) * 0.07;
 
-        if (!eyesClosedRef.current) {
-          const pupilX = currentX * 5;
-          const pupilY = currentY * 5;
-          pupilLeftRef.current?.style.setProperty(
-            'transform',
-            `translate(${pupilX}px, ${pupilY}px)`,
-          );
-          pupilRightRef.current?.style.setProperty(
-            'transform',
-            `translate(${pupilX}px, ${pupilY}px)`,
-          );
-        }
+      const settled =
+        Math.abs(targetX - currentX) < 0.001 &&
+        Math.abs(targetY - currentY) < 0.001;
+      if (settled) {
+        currentX = targetX;
+        currentY = targetY;
+      }
 
-        robotHeadRef.current?.style.setProperty(
+      if (!eyesClosedRef.current) {
+        const pupilX = currentX * 5;
+        const pupilY = currentY * 5;
+        pupilLeftRef.current?.style.setProperty(
           'transform',
-          `rotate(${currentX * 3}deg)`,
+          `translate(${pupilX}px, ${pupilY}px)`,
         );
-        mascotBodyRef.current?.style.setProperty(
+        pupilRightRef.current?.style.setProperty(
           'transform',
-          `translate(${currentX * 8}px, ${currentY * 6}px)`,
-        );
-        decorRef.current?.style.setProperty(
-          'transform',
-          `translate(${currentX * 12}px, ${currentY * 8}px)`,
-        );
-        decor2Ref.current?.style.setProperty(
-          'transform',
-          `translate(${currentX * -6}px, ${currentY * -4}px)`,
+          `translate(${pupilX}px, ${pupilY}px)`,
         );
       }
 
-      frame = window.requestAnimationFrame(tick);
+      robotHeadRef.current?.style.setProperty(
+        'transform',
+        `rotate(${currentX * 3}deg)`,
+      );
+      mascotBodyRef.current?.style.setProperty(
+        'transform',
+        `translate(${currentX * 8}px, ${currentY * 6}px)`,
+      );
+      decorRef.current?.style.setProperty(
+        'transform',
+        `translate(${currentX * 12}px, ${currentY * 8}px)`,
+      );
+      decor2Ref.current?.style.setProperty(
+        'transform',
+        `translate(${currentX * -6}px, ${currentY * -4}px)`,
+      );
+
+      if (!settled) {
+        frame = window.requestAnimationFrame(tick);
+      }
     };
 
-    window.addEventListener('mousemove', handleMouseMove);
-    frame = window.requestAnimationFrame(tick);
+    const schedule = () => {
+      if (!frame && hasMascot && !document.hidden) {
+        frame = window.requestAnimationFrame(tick);
+      }
+    };
+
+    const handleMouseMove = (event: MouseEvent) => {
+      if (!hasMascot) measureMascot();
+      if (!hasMascot) return;
+      targetX = clamp(
+        (event.clientX - mascotCenterX) / (window.innerWidth / 2),
+      );
+      targetY = clamp(
+        (event.clientY - mascotCenterY) / (window.innerHeight / 2),
+      );
+      schedule();
+    };
+
+    measureMascot();
+    window.addEventListener('mousemove', handleMouseMove, { passive: true });
+    window.addEventListener('resize', measureMascot);
 
     return () => {
-      window.cancelAnimationFrame(frame);
+      if (frame) window.cancelAnimationFrame(frame);
       window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('resize', measureMascot);
     };
   }, []);
 
@@ -191,7 +231,7 @@ const LoginPage: React.FC = () => {
         access.normalRouteFilter,
       );
       // 回跳地址必须是当前账号有权限访问的路由，否则进入第一个可访问页面
-      const fallbackPath = getAffixPaths(routes)[0] ?? DEFAULT_ROUTE_PATH;
+      const fallbackPath = getHomePath(routes);
       const targetMatch = redirect ? matchRoute(redirect, routes) : undefined;
       const target = targetMatch ? redirect! : fallbackPath;
       setFlashNotice('登录成功');
@@ -241,7 +281,7 @@ const LoginPage: React.FC = () => {
                 >
                   <defs>
                     <linearGradient
-                      id="headGrad"
+                      id={headGradId}
                       x1="0%"
                       y1="0%"
                       x2="0%"
@@ -259,7 +299,7 @@ const LoginPage: React.FC = () => {
                       />
                     </linearGradient>
                     <linearGradient
-                      id="faceGrad"
+                      id={faceGradId}
                       x1="0%"
                       y1="0%"
                       x2="0%"
@@ -276,14 +316,24 @@ const LoginPage: React.FC = () => {
                         stopOpacity="0.03"
                       />
                     </linearGradient>
-                    <radialGradient id="antennaGlow" cx="50%" cy="50%" r="50%">
+                    <radialGradient
+                      id={antennaGlowId}
+                      cx="50%"
+                      cy="50%"
+                      r="50%"
+                    >
                       <stop offset="0%" stopColor="#93c5fd" stopOpacity="0.5" />
                       <stop offset="100%" stopColor="#93c5fd" stopOpacity="0" />
                     </radialGradient>
                   </defs>
 
                   <g className={styles.antenna}>
-                    <circle cx="120" cy="20" r="16" fill="url(#antennaGlow)" />
+                    <circle
+                      cx="120"
+                      cy="20"
+                      r="16"
+                      fill={`url(#${antennaGlowId})`}
+                    />
                     <line
                       x1="120"
                       y1="24"
@@ -320,7 +370,7 @@ const LoginPage: React.FC = () => {
                       width="124"
                       height="108"
                       rx="36"
-                      fill="url(#headGrad)"
+                      fill={`url(#${headGradId})`}
                     />
                     <rect
                       x="72"
@@ -328,7 +378,7 @@ const LoginPage: React.FC = () => {
                       width="96"
                       height="80"
                       rx="22"
-                      fill="url(#faceGrad)"
+                      fill={`url(#${faceGradId})`}
                     />
 
                     <g
@@ -527,9 +577,27 @@ const LoginPage: React.FC = () => {
           </Form>
 
           {APP_MOCK_ENABLED ? (
-            <p className={styles.demoHint}>
-              演示账号：admin / operator / viewer，密码均为 123456
-            </p>
+            <div className={styles.demoHint}>
+              <span className={styles.demoLabel}>演示账号（密码 123456）</span>
+              <div className={styles.demoAccounts}>
+                {DEMO_ACCOUNTS.map((account) => (
+                  <button
+                    key={account.username}
+                    type="button"
+                    className={styles.demoChip}
+                    onClick={() =>
+                      form.setFieldsValue({
+                        username: account.username,
+                        password: '123456',
+                      })
+                    }
+                  >
+                    {account.username}
+                    <span>{account.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
           ) : null}
         </div>
       </div>

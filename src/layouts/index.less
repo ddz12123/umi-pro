@@ -195,7 +195,7 @@
 
     .ant-menu-item:hover .anticon,
     .ant-menu-submenu-title:hover .anticon {
-      color: #bfdbfe;
+      color: var(--app-primary-light);
     }
 
     /* ---------- 一级分组 ---------- */
@@ -290,11 +290,10 @@
 /* 折叠后弹出的子菜单 */
 .menuPopup {
   padding: 6px !important;
-  background: rgb(10 19 33 / 97%) !important;
+  background: rgb(10 19 33 / 98%) !important;
   border: 1px solid rgb(148 163 184 / 14%);
   border-radius: 12px !important;
-  box-shadow: 0 18px 44px -18px rgb(2 6 18 / 90%) !important;
-  backdrop-filter: blur(12px);
+  box-shadow: 0 12px 32px rgb(2 6 18 / 65%) !important;
 
   :global {
     .ant-menu {
@@ -419,9 +418,8 @@
   height: 50px !important;
   padding: 0 16px 0 20px !important;
   line-height: normal !important;
-  background: rgb(255 255 255 / 94%) !important;
+  background: #fff !important;
   border-bottom: 1px solid var(--app-border);
-  backdrop-filter: blur(10px);
 }
 
 .headerLeft {
@@ -551,194 +549,6 @@
   vertical-align: middle;
 }
 
-.searchTrigger {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  width: 238px;
-  height: 34px;
-  padding: 0 10px;
-  cursor: pointer;
-  background: #f6f8fb;
-  border: 1px solid transparent;
-  border-radius: 8px;
-  transition: background-color 0.18s ease, border-color 0.18s ease,
-    box-shadow 0.18s ease;
-
-  &:hover {
-    background: #f1f5fa;
-  }
-
-  &:focus-visible {
-    background: #fff;
-    border-color: #bfd3fb;
-    box-shadow: 0 0 0 3px var(--app-primary-soft);
-    outline: none;
-  }
-}
-
-.searchPlaceholder {
-  flex: 1;
-  font-size: 13px;
-  color: #94a3b8;
-  text-align: left;
-}
-
-.searchIcon {
-  font-size: 14px;
-  color: #94a3b8;
-}
-
-.kbd {
-  display: inline-flex;
-  align-items: center;
-  height: 18px;
-  padding: 0 5px;
-  font-family: inherit;
-  font-size: 10px;
-  color: #94a3b8;
-  white-space: nowrap;
-  background: #fff;
-  border: 1px solid #e2e8f0;
-  border-radius: 4px;
-}
-
-/* ==================== 搜索弹框 ==================== */
-
-.searchModal {
-  :global {
-    .ant-modal-content {
-      padding: 0;
-      overflow: hidden;
-      border-radius: 14px;
-      box-shadow: 0 16px 48px rgb(15 23 42 / 18%), 0 4px 16px rgb(15 23 42 / 8%);
-    }
-  }
-}
-
-.searchInputWrap {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  height: 56px;
-  padding: 0 18px;
-  border-bottom: 1px solid #edf0f5;
-
-  :global {
-    .ant-input-affix-wrapper {
-      padding: 0;
-      background: transparent;
-
-      /* 整行即搜索区，去掉 antd v6 borderless 的 focus-visible 描边 */
-      &:focus-visible,
-      &:has(input:focus-visible) {
-        outline: none;
-      }
-    }
-
-    .ant-input {
-      font-size: 14px;
-      background: transparent;
-
-      &::placeholder {
-        color: #a8b3c4;
-      }
-    }
-  }
-}
-
-.searchModalIcon {
-  font-size: 17px;
-  color: #64748b;
-}
-
-.searchList {
-  max-height: 360px;
-  padding: 6px;
-  overflow-y: auto;
-}
-
-.searchItem {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-  padding: 10px 12px;
-  text-align: left;
-  cursor: pointer;
-  background: transparent;
-  border: 0;
-  border-radius: 9px;
-  transition: background-color 0.15s ease;
-
-  & + & {
-    margin-top: 2px;
-  }
-}
-
-.searchItemTitle {
-  overflow: hidden;
-  font-size: 13px;
-  color: #1f2937;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-
-.searchItemTrail {
-  margin-left: auto;
-  overflow: hidden;
-  font-size: 11px;
-  color: #94a3b8;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-
-.searchItemEnter {
-  flex-shrink: 0;
-  font-size: 12px;
-  color: var(--app-primary);
-  opacity: 0;
-}
-
-.searchItemActive {
-  background: var(--app-primary-soft);
-
-  .searchItemTitle {
-    font-weight: 500;
-    color: var(--app-primary);
-  }
-
-  .searchItemEnter {
-    opacity: 1;
-  }
-}
-
-.searchEmpty {
-  padding: 24px 0;
-}
-
-.searchFooter {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 9px 16px;
-  font-size: 11px;
-  color: #8a94a6;
-  background: #f8fafc;
-  border-top: 1px solid #edf0f5;
-
-  span {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-  }
-}
-
-.searchCount {
-  margin-left: auto;
-  color: #a8b3c4;
-}
-
 .headerDivider {
   width: 1px;
   height: 18px;
@@ -817,31 +627,6 @@
 
   .userArrow {
     color: rgb(255 255 255 / 45%);
-  }
-
-  .searchTrigger {
-    background: rgb(255 255 255 / 6%);
-
-    &:hover {
-      background: rgb(255 255 255 / 10%);
-    }
-
-    &:focus-visible {
-      background: rgb(255 255 255 / 10%);
-      border-color: var(--app-primary-70);
-      box-shadow: 0 0 0 3px rgb(255 255 255 / 8%);
-    }
-  }
-
-  .searchPlaceholder,
-  .searchIcon {
-    color: rgb(255 255 255 / 45%);
-  }
-
-  .kbd {
-    color: rgb(255 255 255 / 55%);
-    background: rgb(255 255 255 / 8%);
-    border-color: rgb(255 255 255 / 12%);
   }
 }
 
@@ -1042,8 +827,6 @@
       content: '';
       background: transparent;
       transition: background-color 0.2s ease;
-      mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 214 36' preserveAspectRatio='none'%3E%3Cpath d='M17 0h180c4.5 0 8 3.5 8 8v18c0 4.5 4.5 8 9 8v2H0v-2c4.5 0 9-3.5 9-8V8c0-4.5 3.5-8 8-8z'/%3E%3C/svg%3E")
-        center / 100% 100% no-repeat;
       mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 214 36' preserveAspectRatio='none'%3E%3Cpath d='M17 0h180c4.5 0 8 3.5 8 8v18c0 4.5 4.5 8 9 8v2H0v-2c4.5 0 9-3.5 9-8V8c0-4.5 3.5-8 8-8z'/%3E%3C/svg%3E")
         center / 100% 100% no-repeat;
     }
@@ -1349,7 +1132,7 @@
 
 .drawer {
   :global {
-    .ant-drawer-content,
+    .ant-drawer-section,
     .ant-drawer-body {
       padding: 0 !important;
       background: #0b1424;
@@ -1363,42 +1146,12 @@
 
 /* ==================== 响应式 ==================== */
 
-@media (max-width: 1200px) {
-  .searchTrigger {
-    width: 200px;
-  }
-}
-
-@media (max-width: 992px) {
-  .searchTrigger {
-    width: 176px;
-
-    .kbd {
-      display: none;
-    }
-  }
-}
-
 @media (max-width: 767px) {
   .header {
     padding: 0 10px !important;
   }
 
   .breadcrumb {
-    display: none;
-  }
-
-  .searchTrigger {
-    justify-content: center;
-    width: 34px;
-    padding: 0;
-  }
-
-  .searchPlaceholder {
-    display: none;
-  }
-
-  .searchFooter {
     display: none;
   }
 

@@ -9,11 +9,12 @@ import {
   VerticalLeftOutlined,
   VerticalRightOutlined,
 } from '@ant-design/icons';
+import { useMemoizedFn } from 'ahooks';
 import type { MenuProps } from 'antd';
 import { Button, Dropdown, Tabs, Tooltip } from 'antd';
-import React from 'react';
+import React, { useCallback, useMemo } from 'react';
 import styles from '../index.less';
-import { getMenuIcon } from './menu-icons';
+import { getRouteIcon } from './menu-icons';
 
 export interface TabItem {
   key: string;
@@ -55,96 +56,123 @@ const TabsBar: React.FC<TabsBarProps> = ({
     pill: styles.tabsPill,
   }[tabsStyle];
 
-  const buildActions = (tab: TabItem): MenuProps['items'] => {
-    const index = tabs.findIndex((item) => item.key === tab.key);
-    const others = tabs.filter(
-      (item) => item.key !== tab.key && !item.affix,
-    ).length;
-    const left = tabs
-      .slice(0, Math.max(index, 0))
-      .filter((item) => !item.affix);
-    const right = tabs.slice(index + 1).filter((item) => !item.affix);
-    const closableCount = tabs.filter((item) => !item.affix).length;
+  const buildActions = useCallback(
+    (tab: TabItem): MenuProps['items'] => {
+      const index = tabs.findIndex((item) => item.key === tab.key);
+      const others = tabs.filter(
+        (item) => item.key !== tab.key && !item.affix,
+      ).length;
+      const left = tabs
+        .slice(0, Math.max(index, 0))
+        .filter((item) => !item.affix);
+      const right = tabs.slice(index + 1).filter((item) => !item.affix);
+      const closableCount = tabs.filter((item) => !item.affix).length;
 
-    return [
-      {
-        key: 'refresh',
-        label: '刷新当前页',
-        icon: <ReloadOutlined />,
-      },
-      { type: 'divider' },
-      {
-        key: 'close',
-        label: '关闭当前',
-        icon: <CloseOutlined />,
-        disabled: Boolean(tab.affix),
-      },
-      {
-        key: 'closeOthers',
-        label: '关闭其他',
-        icon: <CloseCircleOutlined />,
-        disabled: others === 0,
-      },
-      {
-        key: 'closeLeft',
-        label: '关闭左侧',
-        icon: <VerticalRightOutlined />,
-        disabled: left.length === 0,
-      },
-      {
-        key: 'closeRight',
-        label: '关闭右侧',
-        icon: <VerticalLeftOutlined />,
-        disabled: right.length === 0,
-      },
-      { type: 'divider' },
-      {
-        key: 'closeAll',
-        label: '关闭全部',
-        icon: <MinusCircleOutlined />,
-        disabled: closableCount === 0,
-        danger: true,
-      },
-    ];
-  };
+      return [
+        {
+          key: 'refresh',
+          label: '刷新当前页',
+          icon: <ReloadOutlined />,
+        },
+        { type: 'divider' },
+        {
+          key: 'close',
+          label: '关闭当前',
+          icon: <CloseOutlined />,
+          disabled: Boolean(tab.affix),
+        },
+        {
+          key: 'closeOthers',
+          label: '关闭其他',
+          icon: <CloseCircleOutlined />,
+          disabled: others === 0,
+        },
+        {
+          key: 'closeLeft',
+          label: '关闭左侧',
+          icon: <VerticalRightOutlined />,
+          disabled: left.length === 0,
+        },
+        {
+          key: 'closeRight',
+          label: '关闭右侧',
+          icon: <VerticalLeftOutlined />,
+          disabled: right.length === 0,
+        },
+        { type: 'divider' },
+        {
+          key: 'closeAll',
+          label: '关闭全部',
+          icon: <MinusCircleOutlined />,
+          disabled: closableCount === 0,
+          danger: true,
+        },
+      ];
+    },
+    [tabs],
+  );
 
-  const handleMenuClick = (tab: TabItem, key: string) => {
+  const handleMenuClick = useMemoizedFn((tab: TabItem, key: string) => {
     if (key === 'refresh') onRefresh(tab.key);
     if (key === 'close') onClose(tab.key);
     if (key === 'closeOthers') onCloseOthers(tab.key);
     if (key === 'closeLeft') onCloseLeft(tab.key);
     if (key === 'closeRight') onCloseRight(tab.key);
     if (key === 'closeAll') onCloseAll();
-  };
+  });
 
-  const items = tabs.map((tab) => ({
-    key: tab.key,
-    closable: !tab.affix,
-    label: (
-      <Dropdown
-        trigger={['contextMenu']}
-        menu={{
-          items: buildActions(tab),
-          onClick: ({ key }) => handleMenuClick(tab, key),
-        }}
-      >
-        <span className={styles.tabLabel} title={tab.title}>
-          {tab.icon ? (
-            <span className={styles.tabIcon}>{getMenuIcon(tab.icon, 0)}</span>
-          ) : null}
-          <span className={styles.tabText}>{tab.title}</span>
-        </span>
-      </Dropdown>
-    ),
-  }));
+  const handleMiddleClick = useMemoizedFn(
+    (tab: TabItem, event: React.MouseEvent) => {
+      if (event.button !== 1 || tab.affix) return;
+      event.preventDefault();
+      event.stopPropagation();
+      onClose(tab.key);
+    },
+  );
 
-  const activeTab = tabs.find((tab) => tab.key === activeKey) ?? tabs[0];
+  const items = useMemo(
+    () =>
+      tabs.map((tab) => ({
+        key: tab.key,
+        closable: !tab.affix,
+        label: (
+          <Dropdown
+            trigger={['contextMenu']}
+            menu={{
+              items: buildActions(tab),
+              onClick: ({ key }) => handleMenuClick(tab, key),
+            }}
+          >
+            <span
+              className={styles.tabLabel}
+              title={tab.title}
+              onAuxClick={(event) => handleMiddleClick(tab, event)}
+            >
+              {tab.icon ? (
+                <span className={styles.tabIcon}>{getRouteIcon(tab.icon)}</span>
+              ) : null}
+              <span className={styles.tabText}>{tab.title}</span>
+            </span>
+          </Dropdown>
+        ),
+      })),
+    [tabs, buildActions, handleMenuClick, handleMiddleClick],
+  );
 
-  const moreItems = activeTab
-    ? (buildActions(activeTab) ?? [])
-        .filter((item) => item && item.key !== 'refresh')
-        .filter((item, index) => !(index === 0 && item?.type === 'divider'))
-    : [];
+  const activeTab = useMemo(
+    () => tabs.find((tab) => tab.key === activeKey) ?? tabs[0],
+    [tabs, activeKey],
+  );
+
+  const moreItems = useMemo(
+    () =>
+      activeTab
+        ? (buildActions(activeTab) ?? [])
+            .filter((item) => item && item.key !== 'refresh')
+            .filter((item, index) => !(index === 0 && item?.type === 'divider'))
+        : [],
+    [activeTab, buildActions],
+  );
 
   return (
     <div className={styles.tabsBar}>

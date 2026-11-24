@@ -1,5 +1,5 @@
 import accessFactory from '@/access';
-import { DEFAULT_ROUTE_PATH, getAffixPaths, staticRoutes } from '@/router';
+import { getHomePath, staticRoutes } from '@/router';
 import { filterRoutesByAccess } from '@/router/tree';
 import { getAuthUser } from '@/utils/auth';
 import { doneProgress } from '@/utils/progress';
@@ -66,7 +66,7 @@ const ExceptionPage: React.FC<ExceptionPageProps> = ({
     });
     const routes = filterRoutesByAccess(staticRoutes, access.normalRouteFilter);
     // 异常页是全屏页面，路由可能已卸载，用整页跳转更可靠
-    window.location.assign(getAffixPaths(routes)[0] ?? DEFAULT_ROUTE_PATH);
+    window.location.assign(getHomePath(routes));
   };
   const goBack = () => {
     if (window.history.length > 1) {

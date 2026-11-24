@@ -16,8 +16,9 @@ import {
   updateUser,
 } from '@/services/example';
 import { ActionType, ProColumns } from '@ant-design/pro-components';
+import { useMemoizedFn } from 'ahooks';
 import { App, Button, Form, Input, Select, Space } from 'antd';
-import React, { useRef, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 
 /** 示例：把列表数据转成 CSV Blob；接真实导出接口时直接返回接口 Blob 即可 */
 function toCsvBlob(list: ExampleUser[]): Blob {
@@ -62,15 +63,15 @@ const ExamplePage: React.FC = () => {
     status: params.status as string,
   }));
 
-  const openCreate = () => {
+  const openCreate = useMemoizedFn(() => {
     setEditing(undefined);
     setModalOpen(true);
-  };
+  });
 
-  const openEdit = (record: ExampleUser) => {
+  const openEdit = useMemoizedFn((record: ExampleUser) => {
     setEditing(record);
     setModalOpen(true);
-  };
+  });
 
   const handleSubmit = async (values: Partial<ExampleUser>) => {
     if (editing) {
@@ -82,95 +83,94 @@ const ExamplePage: React.FC = () => {
     }
   };
 
-  const handleDelete = async (record: ExampleUser) => {
+  const handleDelete = useMemoizedFn(async (record: ExampleUser) => {
     await removeUser(record.id);
     message.success('删除成功');
     actionRef.current?.reload();
-  };
+  });
 
   /** 示例导出：拉取列表数据在前端生成 CSV，真实项目换成后端导出接口 */
-  const handleExport = async () => {
+  const handleExport = useMemoizedFn(async () => {
     const result = await queryUsers({ current: 1, pageSize: 100 });
     return toCsvBlob(result.list);
-  };
+  });
 
-  /** 行操作列：无任何行权限时整列隐藏，有权限时按钮再按各自权限码隐藏 */
-  const optionColumn: ProColumns<ExampleUser> = {
-    title: '操作',
-    valueType: 'option',
-    width: 120,
-    render: (_, record) => (
-      <Space size={4}>
-        <Access code="example:update">
-          <Button type="link" size="small" onClick={() => openEdit(record)}>
-            编辑
-          </Button>
-        </Access>
-        <Access code="example:delete">
-          <ConfirmButton
-            type="link"
-            danger
-            size="small"
-            confirmTitle="确认删除该用户？"
-            confirmProps={{ okText: '删除', cancelText: '取消' }}
-            onConfirm={() => handleDelete(record)}
-          >
-            删除
-          </ConfirmButton>
-        </Access>
-      </Space>
-    ),
-  };
-
-  const columns: ProColumns<ExampleUser>[] = [
-    {
-      title: '姓名',
-      dataIndex: 'name',
-      width: 140,
-      formItemProps: {
-        rules: [{ required: true, message: '请输入姓名' }],
-      },
-    },
-    {
-      title: '昵称',
-      dataIndex: 'nickName',
+  const columns = useMemo<ProColumns<ExampleUser>[]>(() => {
+    /** 行操作列：无任何行权限时整列隐藏，有权限时按钮再按各自权限码隐藏 */
+    const optionColumn: ProColumns<ExampleUser> = {
+      title: '操作',
+      valueType: 'option',
       width: 120,
-      search: false,
-    },
-    {
-      title: '邮箱',
-      dataIndex: 'email',
-      copyable: true,
-      search: false,
-    },
-    {
-      title: '性别',
-      dataIndex: 'gender',
-      width: 100,
-      valueEnum: {
-        MALE: { text: '男' },
-        FEMALE: { text: '女' },
+      render: (_, record) => (
+        <Space size={4}>
+          <Access code="example:update">
+            <Button type="link" size="small" onClick={() => openEdit(record)}>
+              编辑
+            </Button>
+          </Access>
+          <Access code="example:delete">
+            <ConfirmButton
+              type="link"
+              danger
+              size="small"
+              confirmTitle="确认删除该用户？"
+              confirmProps={{ okText: '删除', cancelText: '取消' }}
+              onConfirm={() => handleDelete(record)}
+            >
+              删除
+            </ConfirmButton>
+          </Access>
+        </Space>
+      ),
+    };
+
+    return [
+      {
+        title: '姓名',
+        dataIndex: 'name',
+        width: 140,
       },
-    },
-    {
-      title: '状态',
-      dataIndex: 'status',
-      width: 100,
-      valueEnum: {
-        active: { text: '启用', status: 'Success' },
-        disabled: { text: '禁用', status: 'Default' },
+      {
+        title: '昵称',
+        dataIndex: 'nickName',
+        width: 120,
+        search: false,
       },
-      render: (_, record) => <StatusTag value={record.status} />,
-    },
-    {
-      title: '创建时间',
-      dataIndex: 'createdAt',
-      valueType: 'dateTime',
-      width: 180,
-      search: false,
-    },
-    ...(canOperate ? [optionColumn] : []),
-  ];
+      {
+        title: '邮箱',
+        dataIndex: 'email',
+        copyable: true,
+        search: false,
+      },
+      {
+        title: '性别',
+        dataIndex: 'gender',
+        width: 100,
+        valueEnum: {
+          MALE: { text: '男' },
+          FEMALE: { text: '女' },
+        },
+      },
+      {
+        title: '状态',
+        dataIndex: 'status',
+        width: 100,
+        valueEnum: {
+          active: { text: '启用', status: 'Success' },
+          disabled: { text: '禁用', status: 'Default' },
+        },
+        render: (_, record) => <StatusTag value={record.status} />,
+      },
+      {
+        title: '创建时间',
+        dataIndex: 'createdAt',
+        valueType: 'dateTime',
+        width: 180,
+        search: false,
+      },
+      ...(canOperate ? [optionColumn] : []),
+    ];
+  }, [canOperate, handleDelete, openEdit]);
 
   return (
     <>

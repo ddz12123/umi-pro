@@ -1,3 +1,4 @@
+import { appConfig } from '@/config/app';
 import { local } from '@/utils/storage';
 import { create } from 'zustand';
 
@@ -21,7 +22,8 @@ export const THEME_PRESETS: { label: string; value: string }[] = [
   { label: '玫红', value: '#e11d48' },
 ];
 
-const STORAGE_KEY = 'theme-settings';
+const STORAGE_KEY = `${appConfig.storagePrefix}:theme-settings`;
+const LEGACY_STORAGE_KEY = 'theme-settings';
 const HEX_COLOR = /^#[0-9a-f]{6}$/i;
 
 interface StoredTheme {
@@ -46,7 +48,16 @@ function readTheme(): {
   layout: AppLayout;
 } {
   try {
-    const raw = local.getItem(STORAGE_KEY);
+    let raw = local.getItem(STORAGE_KEY);
+    // 兼容旧版本未加前缀的 key，迁移后清理旧值
+    if (!raw) {
+      const legacy = local.getItem(LEGACY_STORAGE_KEY);
+      if (legacy) {
+        raw = legacy;
+        local.setItem(STORAGE_KEY, legacy);
+        local.removeItem(LEGACY_STORAGE_KEY);
+      }
+    }
     if (!raw) {
       return {
         primaryColor: DEFAULT_PRIMARY_COLOR,
@@ -135,11 +146,15 @@ interface ThemeState {
   reset: () => void;
 }
 
+const initialTheme = readTheme();
+applyThemeCssVars(initialTheme.primaryColor);
+
 export const useThemeStore = create<ThemeState>((set, get) => ({
-  ...readTheme(),
+  ...initialTheme,
 
   setPrimaryColor: (primaryColor) => {
     if (!HEX_COLOR.test(primaryColor)) return;
+    applyThemeCssVars(primaryColor);
     set({ primaryColor });
     persist(primaryColor, get().tabsStyle, get().layout);
   },
@@ -155,6 +170,7 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
   },
 
   reset: () => {
+    applyThemeCssVars(DEFAULT_PRIMARY_COLOR);
     set({
       primaryColor: DEFAULT_PRIMARY_COLOR,
       tabsStyle: DEFAULT_TABS_STYLE,
